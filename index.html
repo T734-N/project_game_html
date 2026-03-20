@@ -1,0 +1,3319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>VOID SHOOTER</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{overflow:hidden;background:#1a1a2e;font-family:'Courier New',monospace;touch-action:none;user-select:none;-webkit-user-select:none}
+
+/* ── Responsive font scale ── */
+:root{--fs:clamp(10px,2.2vw,14px);--fsm:clamp(9px,1.8vw,12px)}
+
+/* ══ TOP-LEFT HUD ══ */
+#hud{
+  position:fixed;top:10px;left:10px;
+  color:#0ff;font-size:var(--fs);line-height:1.8;
+  pointer-events:none;z-index:10;
+  text-shadow:0 0 6px #0ff8;
+  background:rgba(0,5,20,.7);border:1px solid #0ff3;border-radius:8px;
+  padding:6px 10px;min-width:clamp(140px,30vw,200px);
+  max-width:38vw;
+}
+/* ── HP Bar ── */
+#hpBarWrap{margin:4px 0 2px 0}
+#hpBarLabel{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+#hpBarText{color:#f55;font-size:var(--fsm);font-weight:bold;text-shadow:0 0 6px #f554;letter-spacing:1px}
+#hpBarPct{color:#f558;font-size:clamp(8px,1.8vw,10px)}
+#hpBarTrack{height:10px;background:rgba(255,0,0,.1);border:1px solid #f553;border-radius:5px;overflow:hidden;position:relative}
+#hpBarFill{height:100%;width:100%;border-radius:5px;transition:width .2s,background .3s;background:linear-gradient(90deg,#f22,#f55)}
+#hpBarFill.low{background:linear-gradient(90deg,#800,#f22);animation:hpPulse .6s infinite alternate}
+#hpBarFill.critical{background:linear-gradient(90deg,#600,#f00);animation:hpPulse .25s infinite alternate}
+@keyframes hpPulse{from{opacity:.7;filter:brightness(.8)}to{opacity:1;filter:brightness(1.3)}}
+#hpRow{display:none}
+.heart{display:none}
+
+/* ══ DEVELOPER PANEL ══ */
+#devBtn{
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%) translateX(-160px);
+  color:#0f0;z-index:20;
+  background:rgba(0,20,0,.85);border:1px solid #0f04;
+  padding:4px 10px;border-radius:5px;cursor:pointer;font-family:monospace;
+  font-size:10px;letter-spacing:1px;min-width:32px;min-height:28px;opacity:.5;
+  transition:opacity .2s;
+}
+#devBtn:hover{opacity:1}
+#devPanel{
+  position:fixed;left:10px;top:50%;transform:translateY(-50%);
+  width:min(270px,90vw);max-height:80vh;overflow-y:auto;
+  background:rgba(0,15,0,.97);border:1px solid #0f04;
+  padding:10px;border-radius:10px;color:#0f0;font-size:11px;
+  display:none;z-index:30;font-family:monospace;
+  box-shadow:0 0 20px #0f04;
+}
+#devPanel.on{display:block}
+.dev-title{color:#0f0;font-size:12px;letter-spacing:2px;border-bottom:1px solid #0f02;padding-bottom:5px;margin-bottom:8px;font-weight:bold}
+.dev-section{margin-bottom:10px;border-bottom:1px solid #0f01;padding-bottom:8px}
+.dev-section-label{color:#0a0;font-size:10px;letter-spacing:1px;margin-bottom:5px;opacity:.8}
+.dev-row{display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+.dev-row label{color:#8f8;font-size:10px;min-width:60px}
+.dev-row input{
+  flex:1;min-width:50px;padding:3px 5px;
+  background:rgba(0,255,0,.06);border:1px solid #0f03;
+  color:#0f0;font-size:10px;border-radius:3px;font-family:monospace;
+}
+.dev-btn{
+  padding:4px 8px;background:rgba(0,255,0,.1);border:1px solid #0f03;
+  color:#0f0;cursor:pointer;border-radius:3px;font-size:10px;font-family:monospace;
+  transition:background .1s;white-space:nowrap;
+}
+.dev-btn:hover{background:rgba(0,255,0,.25)}
+.dev-btn.danger{border-color:#f004;color:#f88;background:rgba(255,0,0,.1)}
+.dev-btn.danger:hover{background:rgba(255,0,0,.25)}
+.dev-btn.warn{border-color:#ff04;color:#ff8;background:rgba(255,200,0,.08)}
+.dev-btn.warn:hover{background:rgba(255,200,0,.2)}
+#devDebugBox{
+  background:rgba(0,0,0,.5);border:1px solid #0f02;border-radius:4px;
+  padding:5px 7px;font-size:9px;color:#6f6;line-height:1.7;margin-top:5px;
+  max-height:120px;overflow-y:auto;
+}
+#devCheatLog{color:#ff0;font-size:9px;margin-top:4px;min-height:14px;opacity:.8}
+#powerScaleHud{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  color:#fa0;font-size:clamp(8px,1.8vw,11px);pointer-events:none;z-index:10;
+  background:rgba(0,5,20,.7);padding:2px 10px;border-radius:4px;letter-spacing:1px;
+  border:1px solid #fa03;display:none;
+}
+#weaponBarWrap{margin-top:3px;height:4px;background:rgba(0,255,255,.12);border-radius:2px;overflow:hidden}
+#weaponBar{height:100%;width:100%;background:#0ff;transition:width .05s;border-radius:2px}
+
+/* ══ TOP-CENTER: Boss bar ══ */
+#bossBar{
+  display:none;position:fixed;top:10px;
+  left:50%;transform:translateX(-50%);
+  width:min(340px,80vw);z-index:10;text-align:center;pointer-events:none;
+}
+#bossLabel{color:#f55;font-size:var(--fsm);letter-spacing:2px;margin-bottom:3px;
+  text-shadow:0 0 8px #f55;animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+#bossTrack{height:12px;background:rgba(255,0,0,.1);border:1px solid #f554;border-radius:5px;overflow:hidden}
+#bossFill{height:100%;width:100%;background:linear-gradient(90deg,#f22,#f80);border-radius:5px;transition:width .2s}
+
+/* ══ TOP-RIGHT: Settings ══ */
+#settingsBtn{
+  position:fixed;top:10px;right:10px;color:#0ff;z-index:20;
+  background:rgba(0,0,0,.75);border:1px solid #0ff4;
+  padding:clamp(5px,1.5vw,8px) clamp(8px,2.5vw,14px);
+  border-radius:6px;cursor:pointer;font-family:monospace;
+  font-size:var(--fsm);min-width:36px;min-height:36px;
+}
+#settingsPanel{
+  position:fixed;top:50px;right:10px;width:min(240px,88vw);
+  background:rgba(0,5,15,.97);border:1px solid #0ff3;
+  padding:12px;border-radius:8px;color:#cff;font-size:var(--fsm);
+  display:none;z-index:25;max-height:80vh;overflow-y:auto;
+}
+#settingsPanel label{display:block;margin-top:8px;font-size:var(--fsm)}
+#settingsPanel input{
+  width:100%;margin-top:3px;padding:6px 8px;
+  background:rgba(0,255,255,.06);border:1px solid #0ff3;
+  color:#cff;font-size:var(--fsm);border-radius:4px;
+  -webkit-appearance:none;
+}
+#settingsPanel button{
+  margin-top:10px;width:100%;padding:8px;
+  background:rgba(0,255,255,.12);border:1px solid #0ff3;
+  color:#cff;cursor:pointer;border-radius:4px;font-size:var(--fsm);
+}
+
+/* ══ RIGHT: Kill feed ══ */
+#killFeed{
+  position:fixed;top:52px;right:10px;
+  font-size:var(--fsm);pointer-events:none;z-index:10;
+  text-align:right;max-width:min(200px,40vw);
+}
+.kf{animation:kfFade 2.5s forwards;margin-bottom:1px;color:#fa8}
+@keyframes kfFade{0%,60%{opacity:1}100%{opacity:0}}
+
+/* ══ BOTTOM-LEFT: Upgrade list ══ */
+#infoPanel{
+  position:fixed;bottom:72px;left:10px;width:min(200px,38vw);
+  background:rgba(0,5,20,.82);border:1px solid #0ff3;border-radius:8px;
+  padding:6px 10px;z-index:10;pointer-events:none;
+  font-size:var(--fsm);color:#9dd;
+}
+#infoPanel .ip-title{
+  color:#0ff;font-size:var(--fsm);letter-spacing:1px;margin-bottom:4px;
+  border-bottom:1px solid #0ff2;padding-bottom:3px;
+}
+#upgradeList{max-height:140px;overflow-y:auto;overflow-x:hidden}
+.upg-row{display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid #0ff1;gap:4px}
+.upg-name{color:#cff;font-size:var(--fsm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.upg-lv{color:#ff0;font-size:10px;flex-shrink:0;background:rgba(255,220,0,.1);padding:0 4px;border-radius:3px}
+
+/* ══ BOTTOM-CENTER: XP bar + time ══ */
+#xpWrap{
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  width:min(280px,55vw);z-index:10;text-align:center;pointer-events:none;
+}
+#xpLabel{color:#0ff9;font-size:var(--fsm);letter-spacing:1px;margin-bottom:2px}
+#xpTrack{height:7px;background:rgba(0,255,255,.1);border:1px solid #0ff3;border-radius:4px;overflow:hidden}
+#xpFill{height:100%;width:0%;background:linear-gradient(90deg,#0ff,#06f);transition:width .3s;border-radius:4px}
+#timeBadge{
+  position:fixed;bottom:38px;left:50%;transform:translateX(-50%);
+  color:#0ff9;font-size:var(--fsm);pointer-events:none;z-index:10;
+  background:rgba(0,5,20,.55);padding:2px 8px;border-radius:4px;white-space:nowrap;
+}
+
+/* ══ BOTTOM-RIGHT: Minimap ══ */
+#mapWrap{
+  position:fixed;bottom:12px;right:10px;
+  border:1px solid #0ff3;border-radius:50%;overflow:hidden;
+  box-shadow:0 0 10px #0ff2;z-index:10;pointer-events:none;
+}
+
+/* ══ OVERLAYS ══ */
+#pauseScreen{display:none;position:fixed;inset:0;background:rgba(0,0,10,.85);align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:50}
+#pauseScreen.on{display:flex}
+#pauseTitle{color:#0ff;font-size:clamp(28px,8vw,52px);letter-spacing:4px;text-shadow:0 0 20px #0ff;text-align:center}
+#pauseSub{color:#0ffa;font-size:var(--fs);letter-spacing:2px;text-align:center}
+
+#announce{
+  display:none;position:fixed;top:20%;left:50%;transform:translateX(-50%);
+  font-size:clamp(16px,4.5vw,28px);letter-spacing:2px;pointer-events:none;z-index:20;
+  text-align:center;text-shadow:0 0 16px currentColor;width:90vw;
+}
+
+/* ══ CARD SCREEN ══ */
+#cardScreen{display:none;position:fixed;inset:0;background:rgba(0,0,12,.96);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:60;cursor:default;overflow-y:auto;padding:14px}
+#cardScreen.on{display:flex}
+#cardTitle{color:#0ff;font-size:clamp(14px,4vw,22px);letter-spacing:3px;text-shadow:0 0 14px #0ff;text-align:center;margin-bottom:2px}
+#cardSubtitle{color:#0ff8;font-size:clamp(10px,2.5vw,13px);letter-spacing:1px;text-align:center;margin-bottom:4px}
+#cardRow{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;width:100%;max-width:980px}
+
+/* Category badge colors */
+.cat-weapon   {background:rgba(255,80,80,.18);color:#f88;border-color:rgba(255,80,80,.4)}
+.cat-item     {background:rgba(80,200,255,.14);color:#8df;border-color:rgba(80,200,255,.35)}
+.cat-utility  {background:rgba(180,120,255,.16);color:#c9f;border-color:rgba(180,120,255,.38)}
+.cat-movement {background:rgba(80,255,160,.14);color:#6fc;border-color:rgba(80,255,160,.35)}
+.cat-power    {background:rgba(255,200,60,.14);color:#fd6;border-color:rgba(255,200,60,.35)}
+
+.card{
+  width:clamp(150px,30vw,210px);
+  padding:0;border-radius:12px;cursor:pointer;
+  border:1px solid;transition:transform .15s,box-shadow .15s,border-color .15s;
+  background:rgba(4,4,20,.9);overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.card:hover,.card:active{transform:translateY(-5px) scale(1.03)}
+
+/* Top color band */
+.card-band{height:4px;width:100%;border-radius:0}
+
+/* Card header */
+.card-head{padding:10px 12px 6px;border-bottom:1px solid rgba(255,255,255,.07)}
+.card-cat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.card-cat{font-size:9px;letter-spacing:2px;padding:2px 7px;border-radius:10px;border:1px solid;font-weight:bold;text-transform:uppercase}
+.card-rarity{font-size:9px;letter-spacing:1px;opacity:.8}
+.card-name{font-size:clamp(12px,3vw,15px);font-weight:bold;letter-spacing:.5px;line-height:1.2;margin-bottom:3px}
+.card-lv-row{display:flex;align-items:center;gap:6px}
+.card-lv-badge{background:rgba(255,220,0,.15);border:1px solid rgba(255,220,0,.4);color:#fd8;font-size:9px;padding:1px 6px;border-radius:8px}
+.card-new-badge{background:rgba(0,255,128,.15);border:1px solid rgba(0,255,128,.4);color:#0fb;font-size:9px;padding:1px 6px;border-radius:8px}
+
+/* Card body */
+.card-body{padding:8px 12px 10px;flex:1;display:flex;flex-direction:column;gap:5px}
+.card-effect-row{display:flex;align-items:flex-start;gap:6px;font-size:clamp(9px,2.2vw,11px);line-height:1.4}
+.card-effect-icon{font-size:11px;opacity:.9;flex-shrink:0;margin-top:1px}
+.card-effect-text{color:#cde;opacity:.9}
+.card-effect-text b{color:#fff;opacity:1}
+.card-bonus{background:rgba(255,220,60,.08);border-left:2px solid rgba(255,200,40,.5);padding:3px 6px;border-radius:0 4px 4px 0;font-size:9px;color:#fc8;margin-top:2px}
+.card-passive{background:rgba(100,200,255,.07);border-left:2px solid rgba(100,200,255,.4);padding:3px 6px;border-radius:0 4px 4px 0;font-size:9px;color:#9cf;margin-top:2px}
+.card-divider{height:1px;background:rgba(255,255,255,.06);margin:3px 0}
+
+/* Level progression preview */
+.card-levels{background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.05);padding:6px 12px;font-size:9px;line-height:1.7;color:#89a}
+.card-levels .lv-current{color:#ffd;font-weight:bold}
+.card-levels .lv-next{color:#aef}
+
+/* Pick button */
+.card-pick{
+  display:block;width:100%;padding:8px;border:none;cursor:pointer;font-family:monospace;
+  font-size:11px;letter-spacing:2px;font-weight:bold;text-transform:uppercase;
+  transition:filter .12s;
+}
+.card-pick:hover{filter:brightness(1.25)}
+
+/* Chest screen */
+#chestScreen{display:none;position:fixed;inset:0;background:rgba(0,0,12,.94);align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:65;cursor:default;overflow-y:auto;padding:10px}
+#chestScreen.on{display:flex}
+#chestTitle{font-size:clamp(16px,4.5vw,22px);letter-spacing:3px;text-shadow:0 0 12px currentColor;text-align:center}
+#chestSubtitle{font-size:var(--fs);color:#aaa;letter-spacing:1px}
+#chestRewards{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:800px;margin-top:4px}
+.reward-card{width:clamp(120px,26vw,170px);padding:10px;border-radius:8px;border:1px solid;background:rgba(0,0,0,.7);text-align:center}
+.reward-card .rw-name{font-size:clamp(11px,2.8vw,13px);font-weight:bold;margin-bottom:3px}
+.reward-card .rw-desc{font-size:clamp(9px,2vw,11px);opacity:.75}
+#chestClose{padding:10px 28px;background:rgba(0,255,255,.12);border:1px solid #0ff4;color:#0ff;cursor:pointer;border-radius:6px;font-family:monospace;font-size:var(--fs);letter-spacing:2px;min-height:44px}
+
+/* Skill tree */
+#skillScreen{display:none;position:fixed;inset:0;background:rgba(0,0,12,.94);align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:55;overflow-y:auto;padding:10px}
+#skillScreen.on{display:flex}
+#skillTitle{color:#0ff;font-size:clamp(14px,4vw,20px);letter-spacing:3px}
+#skillSP{color:#ff0;font-size:var(--fs);letter-spacing:1px}
+#skillGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(clamp(140px,28vw,200px),1fr));gap:10px;width:100%;max-width:720px}
+.snode{padding:10px;border:1px solid #0ff3;border-radius:8px;cursor:pointer;text-align:center;background:rgba(0,255,255,.04);color:#9dd;transition:all .16s;min-height:54px}
+.snode.can{border-color:#ff0;background:rgba(255,255,0,.07);color:#ff0}
+.snode.can:hover,.snode.can:active{background:rgba(255,255,0,.18);transform:scale(1.02)}
+.snode.locked{opacity:.4;cursor:not-allowed}
+.snode .sn-name{font-size:clamp(10px,2.5vw,13px);font-weight:bold;margin-bottom:3px}
+.snode .sn-info{font-size:clamp(9px,2vw,11px);opacity:.8}
+#closeSkill{padding:10px 28px;background:rgba(0,255,255,.12);border:1px solid #0ff4;color:#0ff;cursor:pointer;border-radius:6px;font-family:monospace;font-size:var(--fs);letter-spacing:2px;min-height:44px}
+
+/* Damage flash & game over */
+#dmgFlash{display:none;position:fixed;inset:0;background:rgba(255,0,0,.25);pointer-events:none;z-index:5}
+#gameOver{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:99}
+#gameOver.on{display:flex}
+#goTitle{color:#f44;font-size:clamp(30px,9vw,56px);letter-spacing:4px;text-shadow:0 0 24px #f44;text-align:center}
+#goStats{color:#aaa;font-size:clamp(12px,3.5vw,16px);text-align:center;line-height:2}
+#goBtn{padding:12px 36px;background:#f44;border:none;color:#fff;font-size:clamp(14px,4vw,16px);cursor:pointer;border-radius:6px;font-family:monospace;letter-spacing:2px;min-height:48px}
+#goBtn:hover,#goBtn:active{background:#f66}
+
+/* ══ MOBILE VIRTUAL CONTROLS ══ */
+/* Joystick — bottom left, clear of upgrade panel */
+#joystickZone{
+  display:none;
+  position:fixed;bottom:100px;left:16px;
+  width:clamp(110px,26vw,140px);height:clamp(110px,26vw,140px);
+  border-radius:50%;background:rgba(0,255,255,.08);
+  border:2px solid rgba(0,255,255,.25);
+  pointer-events:all;touch-action:none;z-index:15;
+}
+#joystickKnob{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:38%;height:38%;border-radius:50%;
+  background:rgba(0,255,255,.45);border:2px solid #0ff;
+  pointer-events:none;
+}
+
+/* Action buttons — right side, vertical stack above minimap */
+#actionBtns{
+  display:none;
+  position:fixed;bottom:100px;right:16px;
+  flex-direction:column;gap:8px;
+  pointer-events:all;z-index:15;align-items:center;
+}
+.abtn{
+  width:clamp(54px,13vw,66px);height:clamp(54px,13vw,66px);border-radius:50%;
+  border:2px solid;background:rgba(0,0,0,.6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(17px,4vw,22px);cursor:pointer;
+  touch-action:none;-webkit-tap-highlight-color:transparent;
+  pointer-events:all;transition:background .08s;
+  box-shadow:0 0 8px rgba(0,0,0,.5);
+}
+.abtn:active,.abtn.active{background:rgba(255,255,255,.25)!important}
+#btnShoot{border-color:#f55;color:#f55;background:rgba(255,40,40,.15)}
+#btnDash{border-color:#0ff;color:#0ff}
+#btnShiftLock{border-color:#ff0;color:#ff0;font-size:clamp(11px,2.8vw,14px);letter-spacing:0}
+#btnShiftLock.on{background:rgba(255,220,0,.25)!important;border-color:#ff0}
+
+/* Mobile top buttons row — pause lives here, NOT overlapping HUD or minimap */
+#mobileTopRow{
+  display:none;
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  z-index:55;pointer-events:all;
+}
+#mobilePause{
+  background:rgba(0,0,0,.75);border:1px solid #0ff4;
+  color:#0ff;font-family:monospace;font-size:12px;
+  padding:7px 16px;border-radius:6px;cursor:pointer;
+  min-height:38px;min-width:80px;pointer-events:all;
+}
+
+/* Pause screen — MUST have a tap-able resume button */
+#pauseResumeBtn{
+  margin-top:8px;padding:14px 40px;
+  background:rgba(0,255,255,.15);border:2px solid #0ff;
+  color:#0ff;font-family:monospace;font-size:clamp(14px,4vw,18px);
+  letter-spacing:2px;border-radius:8px;cursor:pointer;
+  min-height:54px;min-width:160px;
+}
+#pauseResumeBtn:active{background:rgba(0,255,255,.35)}
+
+/* ── Media queries ── */
+@media(max-width:480px){
+  #infoPanel{display:none}
+  #killFeed{max-width:30vw;font-size:9px;top:52px}
+  #bossBar{width:70vw}
+  /* On very small screens push xp/time badge up a little to clear joystick */
+  #xpWrap{bottom:14px}
+  #timeBadge{bottom:40px}
+}
+@media(pointer:coarse){
+  .card{width:clamp(140px,38vw,200px)}
+  /* Move minimap up when joystick is shown */
+  #mapWrap{bottom:20px}
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  Score: <span id="score">0</span>&nbsp;&nbsp;<span id="multBadge" style="display:none;color:#f0f"></span><br>
+  Level: <span id="level">1</span>&nbsp;&nbsp;SP: <span id="sp">0</span><br>
+  <div id="hpRow"></div>
+  <div id="hpBarWrap">
+    <div id="hpBarLabel">
+      <span id="hpBarText">❤ HP 3/3</span>
+      <span id="hpBarPct">100%</span>
+    </div>
+    <div id="hpBarTrack"><div id="hpBarFill"></div></div>
+  </div>
+  <span id="weapon">Shotgun</span><br>
+  <div id="weaponBarWrap"><div id="weaponBar"></div></div>
+  <span id="dashStatus" style="font-size:11px;color:#ff0"></span><br>
+  <span id="abilityStatus" style="font-size:11px;color:#f0f"></span><br>
+  <span id="powerHudLine" style="font-size:10px;color:#fa08;letter-spacing:.5px"></span>
+</div>
+<div id="powerScaleHud"></div>
+
+<!-- Player Info Panel -->
+<div id="infoPanel">
+  <div class="ip-title">📋 UPGRADES</div>
+  <div id="upgradeList"><span style="color:#555;font-size:10px">Pick cards to see upgrades</span></div>
+</div>
+
+<div id="xpWrap"><div id="xpLabel">XP</div><div id="xpTrack"><div id="xpFill"></div></div></div>
+<div id="bossBar"><div id="bossLabel">⚡ BOSS ⚡</div><div id="bossTrack"><div id="bossFill"></div></div></div>
+<div id="mapWrap"><canvas id="minimap" width="120" height="120"></canvas></div>
+<div id="pauseScreen">
+  <div id="pauseTitle">PAUSED</div>
+  <div id="pauseSub">P / ESC to resume</div>
+  <button id="pauseResumeBtn" onclick="setPause(false)">▶ RESUME</button>
+</div>
+<div id="announce"></div>
+<div id="dmgFlash"></div>
+<div id="timeBadge"></div>
+<div id="killFeed"></div>
+
+<!-- Mobile top row: pause button centered above HUD area -->
+<div id="mobileTopRow">
+  <button id="mobilePause">⏸ PAUSE</button>
+</div>
+
+<!-- Virtual joystick (bottom-left) -->
+<div id="joystickZone"><div id="joystickKnob"></div></div>
+
+<!-- Action buttons (bottom-right, above minimap) -->
+<div id="actionBtns">
+  <div id="btnShoot" class="abtn">🔫</div>
+  <div id="btnDash"  class="abtn">⚡</div>
+  <div id="btnShiftLock" class="abtn">🔒</div>
+</div>
+
+<!-- Card selection -->
+<div id="cardScreen">
+  <div id="cardTitle">⬆ LEVEL UP — PICK A CARD</div>
+  <div id="cardSubtitle">Choose wisely — each card scales with your power</div>
+  <div id="cardRow"></div>
+</div>
+
+<!-- Chest open screen -->
+<div id="chestScreen">
+  <div id="chestTitle">📦 CHEST OPENED!</div>
+  <div id="chestSubtitle"></div>
+  <div id="chestRewards"></div>
+  <button id="chestClose">COLLECT</button>
+</div>
+
+<!-- Skill tree -->
+<div id="skillScreen">
+  <div id="skillTitle">⬡ SKILL TREE</div>
+  <div id="skillSP">Skill Points: <span id="sp2">0</span></div>
+  <div id="skillGrid"></div>
+  <button id="closeSkill">CLOSE [K]</button>
+</div>
+
+<!-- Game over -->
+<div id="gameOver"><div id="goTitle">GAME OVER</div><div id="goStats"></div><button id="goBtn" onclick="location.reload()">RESTART</button><div style="color:#888;font-size:12px;margin-top:-8px;letter-spacing:1px">or press SPACE</div></div>
+
+<!-- Developer / Cheat Panel -->
+<button id="devBtn" title="Developer Tools [F9]">🛠 DEV [F9]</button>
+<div id="devPanel">
+  <div class="dev-title">🛠 DEV TOOLS <span style="font-size:9px;color:#0a0;opacity:.7">[F9]</span></div>
+  <div id="devCheatLog">Cheat mode active</div>
+
+  <!-- Player Stats -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ PLAYER STATS</div>
+    <div class="dev-row"><label>HP</label><input id="devHpInput" type="number" min="1" value="3"/><button class="dev-btn" id="devSetHp">Set HP</button></div>
+    <div class="dev-row"><label>Max HP</label><input id="devMaxHpInput" type="number" min="1" value="3"/><button class="dev-btn" id="devSetMaxHp">Set</button></div>
+    <div class="dev-row"><label>Speed</label><input id="devSpdInput" type="number" step=".01" min=".05" value=".12"/><button class="dev-btn" id="devSetSpd">Set</button></div>
+    <div class="dev-row"><label>Damage ×</label><input id="devDmgInput" type="number" step=".1" min=".1" value="1"/><button class="dev-btn" id="devSetDmg">Set</button></div>
+    <div class="dev-row">
+      <button class="dev-btn" id="devFullHeal">❤ Full Heal</button>
+      <button class="dev-btn warn" id="devGodMode">⭐ God Mode 30s</button>
+    </div>
+  </div>
+
+  <!-- Level / XP -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ LEVEL / XP</div>
+    <div class="dev-row">
+      <button class="dev-btn" id="devLvlUp">⬆ Level Up</button>
+      <button class="dev-btn" id="devLvl5">⬆⬆ +5 Levels</button>
+    </div>
+    <div class="dev-row"><label>Add SP</label><input id="devSpInput" type="number" min="1" value="5"/><button class="dev-btn" id="devAddSp">Add</button></div>
+    <div class="dev-row"><button class="dev-btn" id="devMaxXp">Fill XP Bar</button></div>
+  </div>
+
+  <!-- Weapons -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ WEAPONS</div>
+    <div class="dev-row">
+      <button class="dev-btn" id="devAllWeapons">🔫 All Weapons</button>
+      <button class="dev-btn warn" id="devRedWeapons">🔴 Unlock Ultimates</button>
+    </div>
+    <div class="dev-row">
+      <select id="devWepSelect" style="flex:1;padding:3px;background:rgba(0,30,0,.9);border:1px solid #0f03;color:#0f0;font-size:10px;border-radius:3px;font-family:monospace"></select>
+      <button class="dev-btn" id="devGiveWep">Give</button>
+    </div>
+  </div>
+
+  <!-- Enemies -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ SPAWN ENEMIES</div>
+    <div class="dev-row">
+      <select id="devEnemySelect" style="flex:1;padding:3px;background:rgba(0,30,0,.9);border:1px solid #0f03;color:#0f0;font-size:10px;border-radius:3px;font-family:monospace">
+        <option value="runner">Runner</option>
+        <option value="normal">Normal</option>
+        <option value="tank">Tank</option>
+        <option value="sniper">Sniper</option>
+        <option value="teleporter">Teleporter</option>
+        <option value="cursed">Cursed</option>
+        <option value="shielder">Shielder</option>
+      </select>
+      <input id="devEnemyCount" type="number" min="1" max="50" value="1" style="width:40px;padding:3px;background:rgba(0,30,0,.9);border:1px solid #0f03;color:#0f0;font-size:10px;border-radius:3px"/>
+      <button class="dev-btn" id="devSpawnEnemy">Spawn</button>
+    </div>
+    <div class="dev-row">
+      <button class="dev-btn warn" id="devSpawnBoss">👑 Spawn Boss</button>
+      <button class="dev-btn warn" id="devSpawnMiniBoss">⚠ Mini Boss</button>
+    </div>
+    <div class="dev-row">
+      <button class="dev-btn danger" id="devKillAll">💀 Kill All Enemies</button>
+    </div>
+  </div>
+
+  <!-- Cards -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ CARDS</div>
+    <div class="dev-row">
+      <button class="dev-btn" id="devShowCards">🃏 Card Screen</button>
+      <button class="dev-btn warn" id="devAllCards">⭐ All Cards</button>
+    </div>
+    <div class="dev-row">
+      <select id="devCardCat" style="flex:1;padding:3px;background:rgba(0,30,0,.9);border:1px solid #0f03;color:#0f0;font-size:10px;border-radius:3px;font-family:monospace">
+        <option value="">Any Category</option>
+        <option value="weapon">🔫 Weapon</option>
+        <option value="item">💎 Item</option>
+        <option value="utility">🛡️ Utility</option>
+        <option value="movement">💨 Movement</option>
+        <option value="power">🌟 Power</option>
+      </select>
+      <button class="dev-btn" id="devShowFilteredCards">Give ▸</button>
+    </div>
+  </div>
+
+  <!-- Scaling -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ DIFFICULTY</div>
+    <div class="dev-row">
+      <label>Enemy HP×</label>
+      <input id="devScaleHp" type="number" step=".1" min=".1" value="1"/>
+      <button class="dev-btn" id="devApplyScale">Apply</button>
+    </div>
+    <div class="dev-row">
+      <label>Dmg Scale</label>
+      <input id="devScaleDmg" type="number" step=".1" min=".1" value="1"/>
+    </div>
+    <div class="dev-row">
+      <label>Speed ×</label>
+      <input id="devScaleSpd" type="number" step=".1" min=".1" value="1"/>
+    </div>
+  </div>
+
+  <!-- Debug Info -->
+  <div class="dev-section">
+    <div class="dev-section-label">▸ DEBUG INFO</div>
+    <div class="dev-row">
+      <button class="dev-btn" id="devToggleDebug">Toggle Stats</button>
+      <button class="dev-btn" id="devTogglePowerHud">Power HUD</button>
+    </div>
+    <div id="devDebugBox" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Settings -->
+<button id="settingsBtn">⚙</button>
+<div id="settingsPanel">
+  <div style="font-weight:bold;margin-bottom:6px;color:#0ff">Settings</div>
+  <div style="font-size:10px;color:#6af;margin-bottom:8px">Click a key field, then press the key to rebind</div>
+  <label>Mouse Sensitivity<input id="senInput" type="number" step=".0005" min=".0005" value=".002"/></label>
+  <label>Forward<input id="kFwd" readonly value="W (KeyW)"/></label>
+  <label>Backward<input id="kBwd" readonly value="S (KeyS)"/></label>
+  <label>Left<input id="kLft" readonly value="A (KeyA)"/></label>
+  <label>Right<input id="kRgt" readonly value="D (KeyD)"/></label>
+  <label>Shoot<input id="kShoot" readonly value="Space"/></label>
+  <label>Shift Lock<input id="kShift" readonly value="ShiftLeft"/></label>
+  <button id="saveSets">Save</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script>
+'use strict'
+// ════════════════════════════════════════════
+// SCENE
+// ════════════════════════════════════════════
+const scene = new THREE.Scene()
+scene.fog = new THREE.FogExp2(0x1a1a2e, 0.006)
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000)
+const renderer = new THREE.WebGLRenderer({antialias:true})
+renderer.setSize(innerWidth, innerHeight)
+renderer.setClearColor(0x1a1a2e)
+document.body.appendChild(renderer.domElement)
+
+scene.add(new THREE.AmbientLight(0xccd8ff, 2.2))
+const sun1 = new THREE.DirectionalLight(0xffffff,2.5); sun1.position.set(30,80,20); scene.add(sun1)
+const sun2 = new THREE.DirectionalLight(0xddeeff,1.2); sun2.position.set(-20,40,-30); scene.add(sun2)
+const playerLight = new THREE.PointLight(0x00ffff,2.5,30); scene.add(playerLight)
+
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({color:0x2e3050}))
+floor.rotation.x=-Math.PI/2; scene.add(floor)
+scene.add(new THREE.GridHelper(600,60,0x5566bb,0x334488))
+
+// ════════════════════════════════════════════
+// PLAYER — distinct look: rounded body + direction fin + glow ring
+// ════════════════════════════════════════════
+const playerGroup = new THREE.Group()
+
+// Main body: cylinder (more organic than box)
+const playerBody = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.8,1,2,8),
+  new THREE.MeshStandardMaterial({color:0x00ff88,emissive:0x00cc44,emissiveIntensity:.7})
+)
+playerBody.position.y=1
+
+// Direction fin on top so facing is obvious
+const playerFin = new THREE.Mesh(
+  new THREE.BoxGeometry(0.25,0.8,1.4),
+  new THREE.MeshStandardMaterial({color:0x00ffff,emissive:0x00aaff,emissiveIntensity:.9})
+)
+playerFin.position.set(0,2,.5)
+
+playerGroup.add(playerBody,playerFin)
+playerGroup.position.y=0
+scene.add(playerGroup)
+
+// Pickup range ring — separate from playerGroup so it stays flat on the floor
+// (added to scene directly; position synced in main loop)
+const ringMat = new THREE.MeshBasicMaterial({color:0x00ffff,transparent:true,opacity:.25})
+const pickupRing = new THREE.Mesh(new THREE.TorusGeometry(2.5,0.08,6,48), ringMat)
+pickupRing.rotation.x = Math.PI/2
+pickupRing.position.y = 0.08
+scene.add(pickupRing)
+
+// Alias so existing code still references player.position etc.
+const player = playerGroup
+
+// ════════════════════════════════════════════
+// AUDIO
+// ════════════════════════════════════════════
+let actx=null
+const getActx=()=>{ if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)(); return actx }
+function tone(f,t='square',dur=.08,vol=.1,dt=0){
+  try{ const c=getActx(),o=c.createOscillator(),g=c.createGain(); o.connect(g);g.connect(c.destination); o.type=t;o.frequency.value=f;o.detune.value=dt; g.gain.setValueAtTime(vol,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+dur); o.start();o.stop(c.currentTime+dur) }catch(err){}
+}
+const snd={
+  shoot:()=>{ tone(300,'sawtooth',.05,.08); tone(180,'square',.04,.05,20) },
+  hit:()=>{ tone(130,'sawtooth',.1,.15) },
+  playerHit:()=>{ tone(55,'sawtooth',.4,.35); tone(35,'square',.35,.28) },
+  lvlup:()=>{ [523,659,784].forEach((f,i)=>setTimeout(()=>tone(f,'sine',.15,.2),i*130)) },
+  boss:()=>{ tone(50,'sawtooth',.6,.4); setTimeout(()=>tone(100,'square',.5,.3),250) },
+  explode:()=>{ for(let i=0;i<3;i++) setTimeout(()=>tone(30+Math.random()*50,'sawtooth',.25,.35),i*50) },
+  pickup:()=>tone(700,'sine',.08,.15),
+  chest:()=>{ [440,550,660,880].forEach((f,i)=>setTimeout(()=>tone(f,'sine',.18,.2),i*80)) },
+  dash:()=>tone(440,'sine',.07,.1)
+}
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let score=0, scoreMultiplier=1, scoreMultiplierTimer=0
+let playerHP=3, maxPlayerHP=3, invTimer=0
+let level=1, exp=0, expToLevel=1, skillPoints=0
+let paused=false, inCardScreen=false, inSkillScreen=false, inChestScreen=false
+let dead=false
+let frameCount=0, gameStartTime=Date.now(), lastMinNotified=-1
+let diffMult=1
+const baseDiff=()=>{ const m=Math.floor((Date.now()-gameStartTime)/60000); return 1+m*.2 }
+let spawnTimer=0, spawnInterval=600
+// Chest spawn timer (every ~15s real time = ~900 frames)
+let chestSpawnTimer=0
+
+// Player upgrades
+let playerSpeed=.12, bulletSpeedMult=1, shotgunPellets=6, pickupRadius=2.5, xpMult=1
+let weaponDropChance=.2, damageMultiplier=1, fireRateMult=1, dashCooldownMax=110
+let hasTripleShot=false, shieldActive=false, shieldTimer=0
+let timeSlowActive=false, timeSlowTimer=0, godMode=false, godTimer=0
+
+// Card upgrade tracking (name → {level, desc})
+const pickedUpgrades = {}  // key = card name, val = {lv, baseDesc}
+
+// Skills — infinite levels, multiplicative scaling, cost increases per level
+const skills={
+  hp:   { name:'Max HP +1',     desc:'Max HP up',       icon:'❤️', baseCost:1, lv:0, apply:(lv)=>{ maxPlayerHP++;playerHP=Math.min(playerHP+1,maxPlayerHP);updateHUD() } },
+  spd:  { name:'Speed +10%',    desc:'Move faster',     icon:'⚡', baseCost:1, lv:0, apply:(lv)=>{ playerSpeed=Math.min(MAX_PLAYER_SPEED,playerSpeed*1.10) } },
+  dmg:  { name:'Damage +20%',   desc:'More damage',     icon:'💥', baseCost:2, lv:0, apply:(lv)=>{ damageMultiplier*=1.2 } },
+  fire: { name:'Fire Rate +12%',desc:'Shoot faster',    icon:'🔥', baseCost:2, lv:0, apply:(lv)=>{ fireRateMult*=1.12 } },
+  range:{ name:'Pickup +0.6',   desc:'Pickup range',    icon:'🔵', baseCost:1, lv:0, apply:(lv)=>{ pickupRadius+=.6;syncPickupRing() } },
+  xpb:  { name:'XP Gain +20%',  desc:'Level faster',   icon:'✨', baseCost:2, lv:0, apply:(lv)=>{ xpMult*=1.2 } },
+  pen:  { name:'Pierce +15%',   desc:'More penetration',icon:'🎯', baseCost:2, lv:0, apply:(lv)=>{ Object.values(weaponDefs).forEach(w=>{if(w.pen)w.pen=Math.min(1,w.pen*1.15)}) } },
+  dash: { name:'Dash Cooldown-',desc:'Dash faster',     icon:'💨', baseCost:1, lv:0, apply:(lv)=>{ dashCooldownMax=Math.max(30,dashCooldownMax-12) } },
+}
+// Skill cost formula: baseCost * ceil(1 + lv * 0.6)
+function getSkillCost(sk){ return sk.baseCost * Math.ceil(1 + sk.lv * 0.6) }
+
+// ── Movement ability state ──
+let movementAbility = 'dash'  // 'dash' | 'blink' | 'phase' | 'void_step' | 'warp'
+let blinkCharges = 0, blinkMaxCharges = 2
+let phaseActive = false, phaseTimer = 0
+// Per-ability cooldown overrides (null = use dashCooldownMax)
+const abilityCD = { dash:null, blink:60, phase:180, void_step:90, warp:150 }
+function getAbilityCD(){ return abilityCD[movementAbility]??dashCooldownMax }
+
+// Player speed cap
+const MAX_PLAYER_SPEED = 0.40
+
+// ══════════════════════════════════════════════════════
+// WEAPON DEFINITIONS — Balanced DPS, rarity tiers
+// DPS formula reference (base dmg * pen * fireRate):
+//   machinegun: 1 * .05 * 15/s  = good crowd control
+//   shotgun:    2 * .30 * ~2.7/s = mid burst
+//   laser:      1.5 * .15 * 7.5/s = spray damage
+//   sniper:     8 * .90 * 1.1/s  = armor killing
+//   rocket:     6 * 1.0 * 0.67/s = area burst
+//   grenade:    5 * 0.6 * 0.5/s  = area + splash
+//   plasma:     3 * .5 * 3.3/s   = mid-range
+//   railgun:    15* 1.0 * 0.5/s  = ultimate
+//   voidburst:  4 * .8 * 5/s     = ultimate rapid
+// rarity: gray/green/blue/purple/yellow/red
+// ══════════════════════════════════════════════════════
+const weaponDefs={
+  // ── GRAY (Common) ──
+  shotgun:    { name:'Shotgun',     rarity:'gray',   speed:10, spread:.30, cooldown:22, pen:.30, pellets:6,  dmgBase:2,   color:0x88ffee },
+  machinegun: { name:'Machine Gun', rarity:'gray',   speed:14, spread:.08, cooldown:4,  pen:.05, pellets:1,  dmgBase:1,   color:0xffff44 },
+  // ── GREEN (Uncommon) ──
+  laser:      { name:'Laser',       rarity:'green',  speed:22, spread:.02, cooldown:8,  pen:.15, pellets:1,  dmgBase:1.5, color:0x44ffaa },
+  grenade:    { name:'Grenade',     rarity:'green',  speed:6,  spread:.06, cooldown:120,pen:.60, pellets:1,  dmgBase:5,   color:0xaaff44, isRocket:true },
+  // ── BLUE (Rare) ──
+  sniper:     { name:'Sniper',      rarity:'blue',   speed:30, spread:0,   cooldown:55, pen:.90, pellets:1,  dmgBase:8,   color:0x44aaff },
+  plasma:     { name:'Plasma',      rarity:'blue',   speed:12, spread:.12, cooldown:18, pen:.50, pellets:3,  dmgBase:3,   color:0xaa44ff },
+  // ── PURPLE (Epic) ──
+  rocket:     { name:'Rocket',      rarity:'purple', speed:7,  spread:0,   cooldown:90, pen:1.0, pellets:1,  dmgBase:6,   color:0xff8800, isRocket:true },
+  chaingun:   { name:'Chain Gun',   rarity:'purple', speed:16, spread:.06, cooldown:2,  pen:.10, pellets:1,  dmgBase:1.2, color:0xff4444 },
+  // ── YELLOW (Legendary) ──
+  photon:     { name:'Photon Blaster',rarity:'yellow',speed:25,spread:.04, cooldown:12, pen:.70, pellets:2,  dmgBase:5,   color:0xffee00 },
+  napalm:     { name:'Napalm',      rarity:'yellow', speed:5,  spread:.15, cooldown:60, pen:.80, pellets:4,  dmgBase:7,   color:0xff4400, isRocket:true },
+  // ── RED (Ultimate) ──
+  railgun:    { name:'RAILGUN',     rarity:'red',    speed:40, spread:0,   cooldown:100,pen:1.0, pellets:1,  dmgBase:15,  color:0xff00ff },
+  voidburst:  { name:'VOID BURST',  rarity:'red',    speed:18, spread:.20, cooldown:12, pen:.80, pellets:8,  dmgBase:4,   color:0xcc00ff },
+}
+
+// Drop weight by rarity (Ultimate weapons are extremely rare)
+const WEAPON_RARITY_DROP_WEIGHT={gray:50, green:28, blue:14, purple:5, yellow:2.5, red:0.5}
+
+// Get a random weapon to drop, factoring in bonus drop chance (only boosts gray/green/blue)
+function rollWeaponDrop(dropChanceBonus=0){
+  const allW=Object.keys(weaponDefs)
+  // Build weighted pool
+  const pool=[]
+  allW.forEach(wid=>{
+    const r=weaponDefs[wid].rarity
+    let w=WEAPON_RARITY_DROP_WEIGHT[r]||1
+    // Drop-chance upgrades only boost gray/green/blue
+    if(['gray','green','blue'].includes(r)) w*=(1+dropChanceBonus)
+    pool.push({wid,w})
+  })
+  const total=pool.reduce((a,b)=>a+b.w,0)
+  let rng=Math.random()*total
+  for(const {wid,w} of pool){ rng-=w; if(rng<=0) return wid }
+  return pool[0].wid
+}
+
+let inventory=['shotgun'], curWeapon=0
+let weaponCooldowns={}  // per-weapon cooldown trackers
+
+
+// ── Enemy ability cards (buff enemies on spawn) ──
+const ENEMY_ABILITY_CARDS=[
+  { id:'speed',  name:'Swift',      apply:(d,lv)=>{ d.speed*=(1+lv*.25) } },
+  { id:'armor',  name:'Armored',    apply:(d,lv)=>{ d.armor=(d.armor||0)+lv*2 } },
+  { id:'hp',     name:'Bulwark',    apply:(d,lv)=>{ d.hp+=lv*5; d.maxHP=d.hp } },
+  { id:'dodge',  name:'Evasive',    apply:(d,lv)=>{ d.dodgeChance=(d.dodgeChance||0)+lv*.12 } },
+  { id:'regen',  name:'Regen',      apply:(d,lv)=>{ d.regenRate=lv*0.02 } },
+  { id:'dmg',    name:'Berserker',  apply:(d,lv)=>{ d.dmgMult=(d.dmgMult||1)+lv*.3 } },
+]
+
+function rollEnemyCards(minutes){
+  // More cards & higher levels as time passes
+  const numCards = minutes>=5?3 : minutes>=3?2 : 1
+  const maxLv = Math.min(5, 1+Math.floor(minutes/2))
+  const cards=[]
+  const used=new Set()
+  for(let i=0;i<numCards;i++){
+    let idx
+    do{ idx=Math.floor(Math.random()*ENEMY_ABILITY_CARDS.length) }while(used.has(idx))
+    used.add(idx)
+    const lv=Math.ceil(Math.random()*maxLv)
+    cards.push({...ENEMY_ABILITY_CARDS[idx],lv})
+  }
+  return cards
+}
+
+// ── Wave / event system state ──
+let waveNum=0, nextWaveTimer=0, eventTimer=0
+const WAVE_INTERVAL=1800  // 30s at 60fps
+const EVENT_INTERVAL=3600 // 60s
+
+// ── Mini-boss pool ──
+let miniBossSpawned=0
+const MINI_BOSS_INTERVAL=7200  // every 2min
+let miniBossTimer=MINI_BOSS_INTERVAL
+
+// Update the pickup ring size whenever pickupRadius changes
+function syncPickupRing(){
+  pickupRing.geometry.dispose()
+  pickupRing.geometry = new THREE.TorusGeometry(pickupRadius, 0.08, 6, 48)
+}
+
+// cfg.keys stores e.code values (physical key location, language-independent)
+const cfg={ sens:.002, keys:{ fwd:'KeyW', bwd:'KeyS', lft:'KeyA', rgt:'KeyD', shoot:'Space', shift:'ShiftLeft' } }
+let keys={}, yaw=0, isDragging=false, shiftLock=false, shiftHeld=false, dashCD=0
+let mouseHeld=false  // left mouse button held = auto-fire
+
+let bullets=[], enemies=[], particles=[], drops=[], chests=[]
+const _killQueue=new Set()  // deferred enemy kills — processed at end of frame
+
+function deferKill(idx){ if(idx>=0 && idx<enemies.length) _killQueue.add(idx) }
+
+function flushKills(){
+  if(!_killQueue.size) return
+  // Sort descending so splicing doesn't shift indices
+  const sorted=[..._killQueue].sort((a,b)=>b-a)
+  _killQueue.clear()
+  sorted.forEach(i=>{ if(i<enemies.length) killEnemy(i) })
+}
+let bossAlive=false, bossRef=null, bossMaxHP=0
+let enemyDamageMult=1
+let sniperDodgeBonus=0  // increased by dodge upgrade card
+
+// Camera
+let pitch=0.55
+const PITCH_MIN=0.08, PITCH_MAX=1.48
+let camDist=28
+// Track player facing for minimap (separate from camera yaw in free mode)
+let playerFacingYaw=0
+
+// ════════════════════════════════════════════
+// CHEST RARITY
+// ════════════════════════════════════════════
+const CHEST_RARITIES=[
+  { id:'gray',    name:'Gray',      color:'#888888', hex:0x888888, rewards:1 },
+  { id:'green',   name:'Green',     color:'#44cc44', hex:0x44cc44, rewards:2 },
+  { id:'blue',    name:'Blue',      color:'#4488ff', hex:0x4488ff, rewards:3 },
+  { id:'purple',  name:'Purple',    color:'#aa44ff', hex:0xaa44ff, rewards:4 },
+  { id:'yellow',  name:'Yellow',    color:'#ffcc00', hex:0xffcc00, rewards:5 },
+  { id:'red',     name:'Red',       color:'#ff2222', hex:0xff2222, rewards:6 }
+]
+const CHEST_RARITY_WEIGHTS=[40,25,18,10,5,2] // gray→red
+
+function rollChestRarity(){
+  const total=CHEST_RARITY_WEIGHTS.reduce((a,b)=>a+b,0)
+  let r=Math.random()*total
+  for(let i=0;i<CHEST_RARITY_WEIGHTS.length;i++){ r-=CHEST_RARITY_WEIGHTS[i]; if(r<=0) return CHEST_RARITIES[i] }
+  return CHEST_RARITIES[0]
+}
+
+// Chest reward pool (same as cards but for chests, higher rarity = higher tier picks)
+function getChestRewardPool(rarityIdx){
+  // 0=gray(common only), 5=red(anything)
+  const maxTier=Math.min(rarityIdx+1, 4) // tier 0-4 maps to rarity buckets
+  const allCards=getCardPool()
+  const tierMap=['common','uncommon','rare','epic','legendary','mythic']
+  const allowed=tierMap.slice(0, maxTier+1)
+  return allCards.filter(c=>allowed.includes(c.rarity))
+}
+
+function rollChestRewards(rarity){
+  const rarityIdx=CHEST_RARITIES.indexOf(rarity)
+  const pool=getChestRewardPool(rarityIdx)
+  const count=rarity.rewards
+  const chosen=[], used=new Set()
+  let attempts=0
+  while(chosen.length<count && attempts<200){
+    attempts++
+    const pick=pool[Math.floor(Math.random()*pool.length)]
+    const key=pool.indexOf(pick)
+    if(!used.has(key)){ used.add(key); chosen.push(pick) }
+  }
+  return chosen
+}
+
+// ════════════════════════════════════════════
+// SPAWN CHESTS
+// ════════════════════════════════════════════
+const CHEST_OPEN_DIST=3.5
+const CHEST_FAR_DIST=60  // beyond this = off-screen indicator on minimap
+
+function spawnChest(){
+  if(paused||inCardScreen||inSkillScreen||inChestScreen) return
+  const rarity=rollChestRarity()
+  const angle=Math.random()*Math.PI*2
+  const dist=25+Math.random()*50
+  const cx=player.position.x+Math.cos(angle)*dist
+  const cz=player.position.z+Math.sin(angle)*dist
+
+  // 3D chest mesh: box body + lid
+  const group=new THREE.Group()
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2,1.4,1.4),new THREE.MeshStandardMaterial({color:rarity.hex,emissive:rarity.hex,emissiveIntensity:.25}))
+  body.position.y=0.7
+  const lid=new THREE.Mesh(new THREE.BoxGeometry(2,0.6,1.4),new THREE.MeshStandardMaterial({color:rarity.hex,emissive:rarity.hex,emissiveIntensity:.4}))
+  lid.position.y=1.7
+  // gold trim strip
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(2.05,.15,1.45),new THREE.MeshStandardMaterial({color:0xffcc44,emissive:0xffcc44,emissiveIntensity:.6}))
+  trim.position.y=1.35
+  group.add(body,lid,trim)
+  group.position.set(cx,0,cz)
+  scene.add(group)
+  chests.push({ group, rarity, opened:false, bobOffset:Math.random()*Math.PI*2 })
+}
+
+function tickChests(){
+  const t=Date.now()*.003
+  for(let i=chests.length-1;i>=0;i--){
+    const ch=chests[i]
+    if(ch.opened) continue
+    // Bob up/down
+    ch.group.position.y=Math.sin(t+ch.bobOffset)*.12
+    ch.group.rotation.y+=.01
+    // Check player proximity
+    const dx=player.position.x-ch.group.position.x
+    const dz=player.position.z-ch.group.position.z
+    if(Math.sqrt(dx*dx+dz*dz)<CHEST_OPEN_DIST){
+      openChest(i); return
+    }
+  }
+}
+
+function openChest(idx){
+  const ch=chests[idx]
+  ch.opened=true
+  snd.chest()
+  burst(ch.group.position.x,ch.group.position.z,40,ch.rarity.hex,6,90)
+  scene.remove(ch.group)
+  chests.splice(idx,1)
+  // Roll rewards
+  const rewards=rollChestRewards(ch.rarity)
+  showChestScreen(ch.rarity,rewards)
+}
+
+function showChestScreen(rarity,rewards){
+  inChestScreen=true
+  // Release pointer lock so cursor is free
+  if(document.pointerLockElement===document.body) document.exitPointerLock()
+  const el=document.getElementById('chestScreen')
+  const title=document.getElementById('chestTitle')
+  const sub=document.getElementById('chestSubtitle')
+  const rewardsEl=document.getElementById('chestRewards')
+  title.textContent=`📦 ${rarity.name.toUpperCase()} CHEST OPENED!`
+  title.style.color=rarity.color
+  sub.textContent=`${rewards.length} reward${rewards.length>1?'s':''} found inside`
+  rewardsEl.innerHTML=''
+  rewards.forEach(r=>{
+    const col=RARITY_COLORS[r.rarity]||'#888'
+    const cat=CAT_META[r.category]||CAT_META.item
+    const desc=r.effects?r.effects[0]:(r.desc||r.name)
+    const d=document.createElement('div')
+    d.className='reward-card'
+    d.style.borderColor=col
+    d.innerHTML=`<div class="rw-name" style="color:${col}">${r.icon||''} ${r.name}</div>
+      <div style="font-size:9px;color:${cat.color};margin-bottom:3px">${cat.label||''}</div>
+      <div class="rw-desc">${desc}</div>`
+    rewardsEl.appendChild(d)
+    // Apply the reward
+    r.apply()
+    recordUpgrade(r.name, desc)
+    recordPowerGain(r.rarity==='mythic'?6:r.rarity==='ultra'?8:r.rarity==='legendary'?4:r.rarity==='epic'?3:r.rarity==='rare'?2:1)
+  })
+  el.classList.add('on')
+}
+
+document.getElementById('chestClose').addEventListener('click',()=>{
+  inChestScreen=false
+  document.getElementById('chestScreen').classList.remove('on')
+  updateInfoPanel()
+})
+
+// ════════════════════════════════════════════
+// MINIMAP
+// ════════════════════════════════════════════
+const mmCanvas=document.getElementById('minimap')
+const mmCtx=mmCanvas.getContext('2d')
+const MM=140, MR=MM/2
+
+function drawMinimap(){
+  mmCtx.clearRect(0,0,MM,MM)
+  mmCtx.save()
+  mmCtx.beginPath(); mmCtx.arc(MR,MR,MR-1,0,Math.PI*2); mmCtx.clip()
+  mmCtx.fillStyle='rgba(0,5,15,.78)'; mmCtx.fillRect(0,0,MM,MM)
+  const scale=.5
+
+  // ── Chest dots / off-screen indicators ──
+  chests.forEach(ch=>{
+    if(ch.opened) return
+    const wx=ch.group.position.x, wz=ch.group.position.z
+    const rx=MR+(wx-player.position.x)*scale
+    const rz=MR+(wz-player.position.z)*scale
+    const worldDist=Math.sqrt((wx-player.position.x)**2+(wz-player.position.z)**2)
+    if(worldDist>CHEST_FAR_DIST){
+      // Off-screen indicator: arrow at edge of minimap
+      const angle=Math.atan2(wz-player.position.z, wx-player.position.x)
+      const edgeX=MR+Math.cos(angle)*(MR-10)
+      const edgeZ=MR+Math.sin(angle)*(MR-10)
+      mmCtx.save()
+      mmCtx.translate(edgeX,edgeZ); mmCtx.rotate(angle)
+      mmCtx.fillStyle=ch.rarity.color
+      mmCtx.beginPath(); mmCtx.moveTo(8,0); mmCtx.lineTo(-4,-4); mmCtx.lineTo(-4,4); mmCtx.closePath(); mmCtx.fill()
+      mmCtx.restore()
+    } else {
+      // Normal dot — rarity color, larger
+      mmCtx.fillStyle=ch.rarity.color
+      mmCtx.beginPath(); mmCtx.arc(rx,rz,5,0,Math.PI*2); mmCtx.fill()
+      // question mark — chest not yet identified until opened
+      mmCtx.fillStyle='#fff'
+      mmCtx.font='bold 7px monospace'; mmCtx.textAlign='center'; mmCtx.textBaseline='middle'
+      mmCtx.fillText('?',rx,rz)
+    }
+  })
+
+  // Drops
+  drops.forEach(d=>{
+    const x=MR+(d.mesh.position.x-player.position.x)*scale
+    const z=MR+(d.mesh.position.z-player.position.z)*scale
+    mmCtx.fillStyle=d.type==='exp'?'#ff0':'#0f0'
+    mmCtx.fillRect(x-1,z-1,2,2)
+  })
+
+  // Enemies
+  enemies.forEach(e=>{
+    const x=MR+(e.position.x-player.position.x)*scale
+    const z=MR+(e.position.z-player.position.z)*scale
+    const t=e.userData.type
+    mmCtx.fillStyle=t==='boss'?'#f44':t==='miniboss'?'#f0f':t==='sniper'?'#48f':t==='tank'?'#a44':e.userData.isElite?'#ff0':'#f80'
+    const r=t==='boss'?5:t==='miniboss'?4:2.5
+    mmCtx.beginPath(); mmCtx.arc(x,z,r,0,Math.PI*2); mmCtx.fill()
+  })
+
+  // Player arrow — tip points in player's actual facing direction
+  // Three.js rotation.y=0 → faces +Z. In canvas: +Z maps to canvas +Y (down).
+  // Arrow tip is at (0,-9) = canvas "up" = world -Z.
+  // To make tip point toward world +Z (default forward), add Math.PI (180°).
+  // General: rotate(playerFacingYaw + Math.PI) aligns tip with player forward.
+  mmCtx.fillStyle='#0ff'
+  mmCtx.save()
+  mmCtx.translate(MR,MR)
+  mmCtx.rotate(playerFacingYaw + Math.PI)
+  mmCtx.beginPath(); mmCtx.moveTo(0,-9); mmCtx.lineTo(5,6); mmCtx.lineTo(0,3); mmCtx.lineTo(-5,6)
+  mmCtx.closePath(); mmCtx.fill()
+  mmCtx.restore()
+  mmCtx.restore()
+}
+
+// ════════════════════════════════════════════
+// PARTICLES
+// ════════════════════════════════════════════
+function burst(x,z,count=20,color=0xffaa00,speed=5,life=70){
+  for(let i=0;i<count;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(.1+Math.random()*.15),new THREE.MeshBasicMaterial({color:color}))
+    p.position.set(x,.5+Math.random(),z)
+    const a=Math.random()*Math.PI*2,sp=(.3+Math.random())*speed*.1
+    p.userData={vx:Math.cos(a)*sp,vy:.05+Math.random()*.15,vz:Math.sin(a)*sp,life,maxLife:life}
+    scene.add(p); particles.push(p)
+  }
+}
+function spark(x,y,z){
+  for(let i=0;i<6;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(.08),new THREE.MeshBasicMaterial({color:Math.random()<.5?0xffff44:0xff8800}))
+    p.position.set(x,y,z)
+    const a=Math.random()*Math.PI*2
+    p.userData={vx:Math.cos(a)*.25,vy:.12+Math.random()*.12,vz:Math.sin(a)*.25,life:18,maxLife:18}
+    scene.add(p); particles.push(p)
+  }
+}
+function tickParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i],d=p.userData
+    p.position.x+=d.vx;p.position.y+=d.vy;p.position.z+=d.vz
+    d.vy-=.005;d.life--
+    p.material.opacity=d.life/d.maxLife;p.material.transparent=true
+    if(d.life<=0||p.position.y<0){ scene.remove(p);particles.splice(i,1) }
+  }
+}
+
+// ════════════════════════════════════════════
+// ENEMY HP BAR SYSTEM
+// Billboard sprites drawn on a canvas texture
+// ════════════════════════════════════════════
+
+// roundRect polyfill for Firefox < 112, Safari < 15.4, older Chrome
+;(function(){
+  const proto = CanvasRenderingContext2D.prototype
+  if(proto.roundRect) return
+  proto.roundRect = function(x, y, w, h, r){
+    const radius = typeof r === 'number' ? r : (Array.isArray(r) ? r[0] : 0)
+    const R = Math.min(radius, w/2, h/2)
+    this.beginPath()
+    this.moveTo(x+R, y)
+    this.lineTo(x+w-R, y)
+    this.quadraticCurveTo(x+w, y, x+w, y+R)
+    this.lineTo(x+w, y+h-R)
+    this.quadraticCurveTo(x+w, y+h, x+w-R, y+h)
+    this.lineTo(x+R, y+h)
+    this.quadraticCurveTo(x, y+h, x, y+h-R)
+    this.lineTo(x, y+R)
+    this.quadraticCurveTo(x, y, x+R, y)
+    this.closePath()
+  }
+})()
+const HP_BAR_W = 128   // canvas pixels wide
+const HP_BAR_H = 18    // canvas pixels tall
+const HP_BAR_PADDING = 3
+
+// Height above enemy origin per type (world units)
+const HP_BAR_Y = { runner:3.4, tank:3.8, teleporter:3.4, cursed:3.4, shielder:3.4, sniper:3.4, normal:3.2, boss:8.5, miniboss:6.0 }
+
+// Bar color based on HP %
+function hpBarColor(pct){
+  if(pct>0.60) return ['#22cc44','#11ff55']   // green
+  if(pct>0.30) return ['#cc8800','#ffaa00']   // orange
+  return ['#cc1111','#ff2222']                // red
+}
+
+function makeHPBarSprite(){
+  const canvas = document.createElement('canvas')
+  canvas.width = HP_BAR_W; canvas.height = HP_BAR_H
+  const tex = new THREE.CanvasTexture(canvas)
+  const mat = new THREE.SpriteMaterial({ map:tex, depthTest:false, transparent:true })
+  const sprite = new THREE.Sprite(mat)
+  // World size of the sprite (scale to ~2.2 units wide, 0.32 tall)
+  sprite.scale.set(2.2, 0.32, 1)
+  sprite.renderOrder = 999
+  sprite._canvas = canvas
+  sprite._ctx    = canvas.getContext('2d')
+  sprite._tex    = tex
+  return sprite
+}
+
+function drawHPBar(sprite, hp, maxHP, isElite, isBoss, flashTimer){
+  const ctx = sprite._ctx
+  const W = HP_BAR_W, H = HP_BAR_H
+  const P = HP_BAR_PADDING
+  ctx.clearRect(0,0,W,H)
+
+  const pct = Math.max(0, Math.min(1, hp / maxHP))
+
+  // Background track
+  ctx.fillStyle = 'rgba(0,0,0,0.72)'
+  ctx.beginPath()
+  ctx.roundRect(0, 0, W, H, 4)
+  ctx.fill()
+
+  // Fill
+  const fillW = Math.max(0, (W - P*2) * pct)
+  const [c1,c2] = hpBarColor(pct)
+  const grad = ctx.createLinearGradient(P, 0, P+fillW, 0)
+  grad.addColorStop(0, c1); grad.addColorStop(1, c2)
+  ctx.fillStyle = grad
+  ctx.beginPath()
+  ctx.roundRect(P, P, fillW, H-P*2, 3)
+  ctx.fill()
+
+  // Flash overlay when hit
+  if(flashTimer > 0){
+    const alpha = Math.min(0.85, flashTimer/8)
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`
+    ctx.beginPath()
+    ctx.roundRect(P, P, fillW, H-P*2, 3)
+    ctx.fill()
+  }
+
+  // Shine strip
+  if(fillW > 0){
+    const shine = ctx.createLinearGradient(P, P, P, P+(H-P*2)*0.5)
+    shine.addColorStop(0,'rgba(255,255,255,0.28)')
+    shine.addColorStop(1,'rgba(255,255,255,0)')
+    ctx.fillStyle = shine
+    ctx.beginPath()
+    ctx.roundRect(P, P, fillW, (H-P*2)*0.5, [3,3,0,0])
+    ctx.fill()
+  }
+
+  // Elite / boss border glow
+  if(isBoss){
+    ctx.strokeStyle = 'rgba(255,0,180,0.9)'; ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.roundRect(0.5,0.5,W-1,H-1,4); ctx.stroke()
+  } else if(isElite){
+    ctx.strokeStyle = 'rgba(255,200,0,0.8)'; ctx.lineWidth = 1.2
+    ctx.beginPath(); ctx.roundRect(0.5,0.5,W-1,H-1,4); ctx.stroke()
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1
+    ctx.beginPath(); ctx.roundRect(0.5,0.5,W-1,H-1,4); ctx.stroke()
+  }
+
+  // HP text (only for bosses and elites — others too small)
+  if(isBoss || isElite){
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'
+    ctx.font = `bold ${isBoss?9:8}px monospace`
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    const label = `${Math.ceil(hp)}/${maxHP}`
+    ctx.fillText(label, W/2, H/2)
+  }
+
+  sprite._tex.needsUpdate = true
+}
+
+function attachEnemyHPBar(enemyGroup, type, isElite){
+  const sprite = makeHPBarSprite()
+  const yOff = HP_BAR_Y[type] ?? 3.5
+  // Boss/miniboss are larger — scale bar up
+  if(type==='boss'){ sprite.scale.set(4.0,0.52,1) }
+  else if(type==='miniboss'){ sprite.scale.set(3.0,0.42,1) }
+  else if(isElite){ sprite.scale.set(2.6,0.36,1) }
+  sprite.position.y = yOff
+  sprite.userData.isHPBar = true
+  enemyGroup.add(sprite)
+  // Store reference in userData for fast access
+  enemyGroup.userData.hpBarSprite = sprite
+  // Draw initial full bar
+  const maxHP = enemyGroup.userData.maxHP || 1
+  drawHPBar(sprite, maxHP, maxHP, isElite, type==='boss'||type==='miniboss', 0)
+}
+
+// Called every frame — updates all enemy HP bars
+function tickEnemyHPBars(){
+  for(let i=0;i<enemies.length;i++){
+    const e=enemies[i]
+    if(!e||!e.userData) continue
+    const d=e.userData
+    const sprite=d.hpBarSprite
+    if(!sprite) continue
+
+    // Decrement flash timer
+    if(d.hpFlashTimer>0) d.hpFlashTimer--
+
+    const distToPlayer = e.position.distanceTo(player.position)
+    const isBoss = d.type==='boss'||d.type==='miniboss'
+
+    // Visibility: always show for boss/elite; others show when damaged or within 28u
+    const isDamaged = d.hp < d.maxHP
+    const isNear    = distToPlayer < 28
+    const shouldShow = isBoss || d.isElite || isDamaged || isNear
+
+    sprite.visible = shouldShow
+
+    if(shouldShow){
+      drawHPBar(sprite, d.hp, d.maxHP, d.isElite||false, isBoss, d.hpFlashTimer||0)
+      // Billboard faces camera automatically (Sprite always faces camera in Three.js)
+    }
+  }
+}
+
+// ════════════════════════════════════════════
+// HIT FLASH SYSTEM — frame-driven, no setTimeout
+// Avoids race conditions and stuck colors
+// ════════════════════════════════════════════
+const HIT_FLASH_FRAMES = 7   // how many frames to stay white
+const HIT_FLASH_FADE   = 5   // frames to fade back
+
+function triggerHitFlash(enemy){
+  const d = enemy.userData
+  if(!d || !d.bodyMesh || !d.bodyMesh.material) return
+  const mat = d.bodyMesh.material
+  // Reset timer (handles rapid hits correctly — just restart)
+  d.hitFlashFrames = HIT_FLASH_FRAMES + HIT_FLASH_FADE
+  d.hpFlashTimer = 12
+  // Apply flash color immediately
+  if(mat.emissive) mat.emissive.setHex(0xffffff)
+  if(mat.color)    mat.color.setHex(0xffffff)
+  mat.emissiveIntensity = 1.6
+}
+
+function tickHitFlashes(){
+  for(let i=0;i<enemies.length;i++){
+    const e=enemies[i]
+    if(!e||!e.userData) continue
+    const d=e.userData
+    if(!d.hitFlashFrames || d.hitFlashFrames<=0) continue
+    d.hitFlashFrames--
+
+    const mat = d.bodyMesh?.material
+    if(!mat) continue
+
+    if(d.hitFlashFrames > HIT_FLASH_FADE){
+      // Still in solid white phase
+      if(mat.emissive) mat.emissive.setHex(0xffffff)
+      if(mat.color)    mat.color.setHex(0xffffff)
+      mat.emissiveIntensity = 1.6
+    } else if(d.hitFlashFrames > 0){
+      // Fade phase: lerp from flash back to original
+      const t = d.hitFlashFrames / HIT_FLASH_FADE  // 1→0
+      const origE = d.origEmissiveHex
+      const origC = d.origColorHex
+
+      // Lerp each channel
+      const lerp = (a, b, t) => Math.round(a + (b-a)*t)
+      const lerpHex = (flash, orig, t) => {
+        const fr=(flash>>16)&0xff, fg=(flash>>8)&0xff, fb=flash&0xff
+        const or=(orig>>16)&0xff,  og=(orig>>8)&0xff,  ob=orig&0xff
+        return (lerp(or,fr,t)<<16)|(lerp(og,fg,t)<<8)|lerp(ob,fb,t)
+      }
+      if(mat.emissive) mat.emissive.setHex(lerpHex(0xffffff, origE, t))
+      if(mat.color)    mat.color.setHex(lerpHex(0xffffff, origC, t))
+      mat.emissiveIntensity = d.origEmissiveIntensity + (1.6 - d.origEmissiveIntensity) * t
+    } else {
+      // Fully restored — snap to exact original values
+      if(mat.emissive) mat.emissive.setHex(d.origEmissiveHex)
+      if(mat.color)    mat.color.setHex(d.origColorHex)
+      mat.emissiveIntensity = d.origEmissiveIntensity
+      d.hitFlashFrames = 0
+    }
+  }
+}
+// ════════════════════════════════════════════
+const SPAWN_MIN=20
+
+// ════════════════════════════════════════════
+// ENEMIES
+// Enemies scale based on player's total power level
+// ════════════════════════════════════════════
+let playerPowerScore = 0  // raw score, increases with upgrades
+let devEnemyHpScale = 1, devEnemyDmgScale = 1, devEnemySpdScale = 1
+
+function getPlayerPowerMult(){
+  // Three components: time, upgrades, and raw level
+  const minutes = Math.floor((Date.now()-gameStartTime)/60000)
+  const timeMult = 1 + minutes * 0.18          // time pressure
+  const upgradeMult = 1 + playerPowerScore * 0.05  // upgrade pressure
+  const levelMult = 1 + (level-1) * 0.06       // level pressure
+  const raw = timeMult * upgradeMult * levelMult
+  // Smooth soft cap: log curve above 6x prevents runaway
+  if(raw <= 6) return raw
+  return 6 + Math.log(raw - 5) * 1.8
+}
+
+// How strong are player bullets right now (scales with upgrades & level)
+function getBulletPowerMult(){
+  const upgradeFactor = 1 + playerPowerScore * 0.06
+  const levelFactor   = 1 + (level-1) * 0.08
+  return damageMultiplier * upgradeFactor * levelFactor
+}
+
+function getPowerScaledEnemyStats(baseHp, baseSpeed, baseDmg){
+  const pm = getPlayerPowerMult()
+  return {
+    hp:    Math.ceil(baseHp    * pm * devEnemyHpScale),
+    speed: baseSpeed * Math.min(2.2, 1 + (pm-1)*0.30) * devEnemySpdScale,
+    dmg:   baseDmg   * Math.min(3.0, 1 + (pm-1)*0.45) * devEnemyDmgScale,
+  }
+}
+
+function recordPowerGain(amount=1){
+  playerPowerScore += amount
+  updatePowerHud()
+}
+
+function updatePowerHud(){
+  const el=document.getElementById('powerScaleHud')
+  if(!el||el.style.display==='none') return
+  const pm=getPlayerPowerMult()
+  const bpm=getBulletPowerMult()
+  el.textContent=`⚡ Power: ${playerPowerScore}pts · Enemy ×${pm.toFixed(2)} · Bullet ×${bpm.toFixed(2)}`
+}
+
+function baseHP(type){
+  const base={runner:3,normal:5,tank:14,sniper:4,teleporter:5,cursed:6,shielder:10,boss:80,miniboss:40}[type]||5
+  const minuteBonus=Math.floor((Date.now()-gameStartTime)/60000)*2
+  const levelBonus = (level-1) * 2
+  const rawBase = Math.ceil(base + levelBonus + minuteBonus)
+  return Math.ceil(rawBase * getPlayerPowerMult() * devEnemyHpScale)
+}
+
+let killsSinceBoss=0
+
+function spawnEnemy(overrideType=null, isElite=false){
+  if(paused||inCardScreen||inSkillScreen||inChestScreen) return
+  if(!overrideType && killsSinceBoss>=25 && !bossAlive){ killsSinceBoss=0; spawnBoss(); return }
+
+  const minutes=Math.floor((Date.now()-gameStartTime)/60000)
+  const td=getTimedDifficultyStats()
+
+  // Spawn pos
+  const minDist=Math.min(20, 12+waveNum*1.5)
+  const angle=Math.random()*Math.PI*2
+  const dist=minDist+Math.random()*30
+  const e=new THREE.Group()
+  e.position.set(player.position.x+Math.cos(angle)*dist, 0, player.position.z+Math.sin(angle)*dist)
+
+  // ── Type selection ──
+  const rangedChance=Math.min(0.50, 0.08+minutes*0.055)
+  const specialChance=Math.min(0.30, minutes*0.04) // teleporter/cursed/shielder
+  let type
+  if(overrideType){ type=overrideType }
+  else {
+    const r=Math.random()
+    if(r<0.18)                          type='runner'
+    else if(r<0.34)                     type='tank'
+    else if(r<0.34+specialChance*0.4)   type='teleporter'
+    else if(r<0.34+specialChance*0.7)   type='cursed'
+    else if(r<0.34+specialChance)       type='shielder'
+    else if(r<0.34+specialChance+rangedChance) type='sniper'
+    else                                type='normal'
+  }
+
+  let speed,bodyColor,emissiveColor,bodyGeo,isRanged=false,enemyWeapon=null,armorBase=0
+  const g=new THREE.Group()  // visual sub-group
+
+  switch(type){
+    case 'runner': {
+      // Fast orange cone — naruto runner
+      speed=.13*td.speedMult; bodyColor=0xff8800; emissiveColor=0x662200; armorBase=0
+      const body=new THREE.Mesh(new THREE.ConeGeometry(.65,2.4,6),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.6}))
+      body.position.y=1.2; g.add(body)
+      // Speed lines (thin fins)
+      for(let i=0;i<3;i++){
+        const fin=new THREE.Mesh(new THREE.BoxGeometry(.05,.8,1.4),new THREE.MeshBasicMaterial({color:0xffaa00}))
+        fin.position.set(0,2,.3+i*.25); fin.rotation.x=-.3; g.add(fin)
+      }
+      break }
+    case 'tank': {
+      // Heavy dark red block with armor plates
+      speed=.04*td.speedMult; bodyColor=0xaa1111; emissiveColor=0x440000; armorBase=4
+      const body=new THREE.Mesh(new THREE.BoxGeometry(2.6,2,2.6),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.4}))
+      body.position.y=1; g.add(body)
+      // Armor plates on sides
+      const plateMat=new THREE.MeshStandardMaterial({color:0x882222,emissive:0x220000,emissiveIntensity:.3})
+      const frontPlate=new THREE.Mesh(new THREE.BoxGeometry(2.8,.8,.2),plateMat); frontPlate.position.set(0,1.6,1.35); g.add(frontPlate)
+      const shoulderL=new THREE.Mesh(new THREE.BoxGeometry(.3,1,2),plateMat); shoulderL.position.set(1.5,1.5,0); g.add(shoulderL)
+      const shoulderR=shoulderL.clone(); shoulderR.position.set(-1.5,1.5,0); g.add(shoulderR)
+      break }
+    case 'teleporter': {
+      // Purple diamond — blinks/teleports short range (naruto Shunpo inspired)
+      speed=.06*td.speedMult; bodyColor=0xcc44ff; emissiveColor=0x660099; armorBase=0
+      const body=new THREE.Mesh(new THREE.OctahedronGeometry(1.0),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.8,transparent:true,opacity:.85}))
+      body.position.y=1.4; g.add(body)
+      // Rune rings
+      for(let i=0;i<2;i++){
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(.9,.06,6,24),new THREE.MeshBasicMaterial({color:0xee88ff}))
+        ring.position.y=1.4; ring.rotation.x=i*Math.PI/3; g.add(ring)
+      }
+      break }
+    case 'cursed': {
+      // Dark green pulsing enemy — cursed aura, applies bleed effect
+      speed=.07*td.speedMult; bodyColor=0x22aa44; emissiveColor=0x115522; armorBase=1
+      const body=new THREE.Mesh(new THREE.SphereGeometry(1.1,8,8),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.7,transparent:true,opacity:.9}))
+      body.position.y=1.4; g.add(body)
+      // Curse tendrils
+      for(let i=0;i<4;i++){
+        const t=new THREE.Mesh(new THREE.CylinderGeometry(.06,.12,1.5,4),new THREE.MeshBasicMaterial({color:0x55ff55}))
+        t.position.set(Math.cos(i*Math.PI/2)*.8,2.2,Math.sin(i*Math.PI/2)*.8); t.rotation.z=Math.cos(i*Math.PI/2)*.5; g.add(t)
+      }
+      break }
+    case 'shielder': {
+      // Blue sphere with visible shield bubble — blocks from front
+      speed=.05*td.speedMult; bodyColor=0x3366ff; emissiveColor=0x112266; armorBase=6
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(.8,1,2,8),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.5}))
+      body.position.y=1; g.add(body)
+      // Shield bubble (transparent sphere)
+      const shield=new THREE.Mesh(new THREE.SphereGeometry(1.6,10,10),new THREE.MeshBasicMaterial({color:0x4488ff,transparent:true,opacity:.25,side:THREE.DoubleSide}))
+      shield.position.y=1.2; g.add(shield)
+      break }
+    case 'sniper': {
+      // Blue octahedron + gun barrel
+      speed=.045*td.speedMult; bodyColor=0x2266ff; emissiveColor=0x001166; armorBase=0; isRanged=true
+      const wpool=['laser','shotgun','sniper','machinegun']
+      if(minutes>=3) wpool.push('plasma','plasma')
+      if(minutes>=5) wpool.push('rocket')
+      enemyWeapon=wpool[Math.floor(Math.random()*wpool.length)]
+      const body=new THREE.Mesh(new THREE.OctahedronGeometry(1.1),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.5}))
+      body.position.y=1.4; g.add(body)
+      const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1.0,6),new THREE.MeshStandardMaterial({color:0x88aaff,emissive:0x2244ff,emissiveIntensity:.8}))
+      barrel.rotation.x=Math.PI/2; barrel.position.set(0,1.5,1.3); g.add(barrel)
+      break }
+    default: {
+      // Normal — hexagonal pillar
+      speed=.06*td.speedMult; bodyColor=0xff2200; emissiveColor=0x440000; armorBase=0
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(.6,1,2,6),new THREE.MeshStandardMaterial({color:bodyColor,emissive:emissiveColor,emissiveIntensity:.5}))
+      body.position.y=1.2; g.add(body)
+    }
+  }
+
+  // White eye (all types)
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),new THREE.MeshBasicMaterial({color:isElite?0xffaa00:0xffffff}))
+  eye.position.set(0,type==='teleporter'?2.2:1.8,.85); g.add(eye)
+
+  // Elite: gold crown + glow
+  if(isElite){
+    const crown=new THREE.Mesh(new THREE.ConeGeometry(.4,1.1,5),new THREE.MeshStandardMaterial({color:0xffdd00,emissive:0xaa6600,emissiveIntensity:.9}))
+    crown.position.y=3.2; g.add(crown)
+    armorBase+=4; speed*=1.3; bodyColor=0xffcc00
+  }
+
+  e.add(g)
+
+  const baseHp=baseHP(type)*(isElite?2.5:1)
+  // Apply power scaling to speed (HP already scaled inside baseHP)
+  const _pm=getPlayerPowerMult()
+  const _spdScale=Math.min(1.8, 1+(_pm-1)*0.35)*devEnemySpdScale
+  const SPEED_CAP={runner:.22, tank:.11, teleporter:.16, cursed:.14, shielder:.13, sniper:.15, normal:.15}
+  const _bodyMat = g.children[0]?.material
+  const ud={
+    type, speed:Math.min(speed*_spdScale, SPEED_CAP[type]||.15), hp:baseHp, maxHP:baseHp,
+    armor:armorBase, dmgMult:devEnemyDmgScale,
+    shootTimer:0, changeTimer:0, targetAngle:angle,
+    sniperState:'approaching', strafePhase:Math.random()*Math.PI*2, dodgeCooldown:0,
+    dodgeChance:0, regenRate:0,
+    isRanged, enemyWeapon, isElite,
+    bodyMesh:g.children[0],
+    hpFlashTimer:0,
+    // Hit flash — stored once at spawn, never overwritten during flash
+    hitFlashFrames:0,
+    origEmissiveHex:   _bodyMat?.emissive ? _bodyMat.emissive.getHex() : 0x000000,
+    origEmissiveIntensity: _bodyMat?.emissiveIntensity ?? 0.5,
+    origColorHex:      _bodyMat?.color ? _bodyMat.color.getHex() : 0xffffff,
+    // Teleporter state
+    teleportTimer:0, teleportCooldown:Math.floor(180+Math.random()*120),
+    // Cursed state
+    curseTimer:0,
+    // Shielder: front armor
+    shieldActive:type==='shielder',
+  }
+  const cards=rollEnemyCards(minutes)
+  ud.abilityCards=cards
+  cards.forEach(card=>card.apply(ud,card.lv))
+  e.userData=ud
+  // Attach HP bar billboard
+  attachEnemyHPBar(e, type, isElite)
+  scene.add(e); enemies.push(e)
+}
+
+function spawnBoss(){
+  if(bossAlive) return; bossAlive=true
+  const angle=Math.random()*Math.PI*2
+  const g=new THREE.Group()
+  const bBody=new THREE.Mesh(new THREE.BoxGeometry(5,5,5),new THREE.MeshStandardMaterial({color:0xff2288,emissive:0x440022,emissiveIntensity:.7}))
+  bBody.position.y=2.5
+  // Crown spikes
+  for(let i=0;i<4;i++){
+    const spike=new THREE.Mesh(new THREE.ConeGeometry(.4,2,5),new THREE.MeshStandardMaterial({color:0xff00aa,emissive:0x660033,emissiveIntensity:.9}))
+    spike.position.set(Math.cos(i*Math.PI/2)*2.2,5.5,Math.sin(i*Math.PI/2)*2.2)
+    g.add(spike)
+  }
+  g.add(bBody)
+  const bpos_dist=30+Math.random()*10
+  g.position.set(player.position.x+Math.cos(angle)*bpos_dist,0,player.position.z+Math.sin(angle)*bpos_dist)
+  const maxHP=25+level*4
+  g.userData={type:'boss',speed:.03*diffMult,hp:maxHP,maxHP,phase:1,shootTimer:0,bodyMesh:bBody,
+    hpFlashTimer:0,hitFlashFrames:0,
+    origEmissiveHex:0x440022,origEmissiveIntensity:.7,origColorHex:0xff2288}
+  scene.add(g);enemies.push(g);bossRef=g;bossMaxHP=maxHP
+  attachEnemyHPBar(g,'boss',false)
+  document.getElementById('bossBar').style.display='block'
+  snd.boss();announce('⚡ BOSS APPEARED ⚡','#f44')
+}
+
+function spawnMiniBoss(){
+  if(bossAlive) return
+  const angle=Math.random()*Math.PI*2
+  const g=new THREE.Group()
+  const bBody=new THREE.Mesh(new THREE.BoxGeometry(3,3,3),new THREE.MeshStandardMaterial({color:0xaa44ff,emissive:0x550099,emissiveIntensity:.7}))
+  bBody.position.y=1.5
+  // Purple crown
+  const crown=new THREE.Mesh(new THREE.ConeGeometry(.5,1.5,5),new THREE.MeshStandardMaterial({color:0xffaa00,emissive:0x885500,emissiveIntensity:.8}))
+  crown.position.y=4; g.add(crown)
+  g.add(bBody)
+  const d=18+Math.random()*8
+  g.position.set(player.position.x+Math.cos(angle)*d,0,player.position.z+Math.sin(angle)*d)
+  const maxHP=12+level*3
+  const ud={type:'miniboss',speed:.055*diffMult,hp:maxHP,maxHP,armor:3,dmgMult:1.5,
+    shootTimer:0,phase:1,bodyMesh:bBody,dodgeChance:.1,regenRate:.01,abilityCards:[],
+    hpFlashTimer:0,hitFlashFrames:0,
+    origEmissiveHex:0x550099,origEmissiveIntensity:.7,origColorHex:0xaa44ff}
+  // Give mini boss 2 ability cards
+  rollEnemyCards(99).slice(0,2).forEach(c=>c.apply(ud,c.lv))
+  g.userData=ud
+  scene.add(g);enemies.push(g)
+  attachEnemyHPBar(g,'miniboss',false)
+  miniBossSpawned++
+  announce('⚠ MINI BOSS APPEARED ⚠','#f0f')
+  snd.boss()
+}
+
+// ── Wave / event spawner ──
+// spawnInterval is set here once per minute, not every frame
+let _lastDiffMin=-1
+function tickWaveSystem(){
+  if(paused||inCardScreen||inSkillScreen||inChestScreen) return
+  const minutes=Math.floor((Date.now()-gameStartTime)/60000)
+
+  // Update spawn interval once per minute (not every frame)
+  if(minutes!==_lastDiffMin){
+    _lastDiffMin=minutes
+    spawnInterval=getTimedDifficultyStats().spawnRate
+  }
+
+  // Wave timer
+  nextWaveTimer++
+  if(nextWaveTimer>=WAVE_INTERVAL){
+    nextWaveTimer=0
+    waveNum++
+    const count=Math.min(12, 3+waveNum+Math.floor(minutes/2))  // capped at 12
+    for(let i=0;i<count;i++) setTimeout(()=>spawnEnemy(),i*250)
+    if(waveNum>=3) setTimeout(()=>spawnEnemy(null,true), count*250+500)
+    announce(`🌊 WAVE ${waveNum} — ${count} enemies!`,'#0af')
+  }
+
+  // Event timer
+  eventTimer++
+  if(eventTimer>=EVENT_INTERVAL){
+    eventTimer=0
+    const roll=Math.random()
+    const evCount=Math.min(8, 4+Math.floor(minutes/2))
+    if(roll<0.4){
+      for(let i=0;i<evCount;i++) setTimeout(()=>spawnEnemy('runner'),i*100)
+      announce('⚡ ENEMY SWARM!','#f80')
+    } else if(roll<0.7){
+      for(let i=0;i<Math.min(5,2+Math.floor(minutes/3));i++) setTimeout(()=>spawnEnemy('tank'),i*500)
+      announce('🛡 TANK ASSAULT!','#a22')
+    } else {
+      for(let i=0;i<Math.min(6,3+Math.floor(minutes/3));i++) setTimeout(()=>spawnEnemy('sniper'),i*400)
+      announce('🎯 SNIPER SQUAD!','#48f')
+    }
+  }
+
+  // Mini boss every 2 min
+  miniBossTimer--
+  if(miniBossTimer<=0){ miniBossTimer=MINI_BOSS_INTERVAL; spawnMiniBoss() }
+}
+// ════════════════════════════════════════════
+// diffMult already scales with time via baseDiff().
+// enemyDamageMult declared in STATE section above.
+
+function getTimedDifficultyStats(){
+  const minutes = Math.floor((Date.now()-gameStartTime)/60000)
+  return {
+    speedMult:  Math.min(2.5, 1 + minutes * 0.12),   // caps at +150%
+    damageMult: Math.min(3.0, 1 + minutes * 0.15),   // caps at +200%
+    spawnRate:  Math.max(240, 600 - minutes * 45)     // 10s → 4s over ~8min
+  }
+}
+
+function tickEnemies(){
+  const eff=s=>timeSlowActive?s*.3:s
+  const td = getTimedDifficultyStats()
+  enemyDamageMult = td.damageMult
+
+  for(let i=enemies.length-1;i>=0;i--){
+    const e=enemies[i]
+    if(!e||!e.userData) continue  // guard against mid-frame removal
+    const d=e.userData
+    const dx=player.position.x-e.position.x, dz=player.position.z-e.position.z
+    const dist=Math.sqrt(dx*dx+dz*dz)||.001
+
+    // ── Runner: charge directly ──
+    if(d.type==='runner'){
+      e.position.x+=(dx/dist)*eff(d.speed)
+      e.position.z+=(dz/dist)*eff(d.speed)
+    }
+
+    // ── Teleporter: normal move but teleports toward player periodically ──
+    else if(d.type==='teleporter'){
+      e.position.x+=(dx/dist)*eff(d.speed)
+      e.position.z+=(dz/dist)*eff(d.speed)
+      d.teleportTimer++
+      if(d.teleportTimer>=d.teleportCooldown && dist>5){
+        // Blink closer
+        const blinkDist=Math.min(dist-3, 12)
+        e.position.x+=dx/dist*blinkDist
+        e.position.z+=dz/dist*blinkDist
+        burst(e.position.x,e.position.z,12,0xcc44ff,3,30)
+        d.teleportTimer=0
+        d.teleportCooldown=Math.floor(150+Math.random()*100)
+      }
+    }
+
+    // ── Cursed: slow approach, applies damage-over-time on contact ──
+    else if(d.type==='cursed'){
+      e.position.x+=(dx/dist)*eff(d.speed*.9)
+      e.position.z+=(dz/dist)*eff(d.speed*.9)
+      // Pulse body scale (eerie breathing)
+      const pulse=1+Math.sin(frameCount*.08+d.strafePhase)*.12
+      if(d.bodyMesh) d.bodyMesh.scale.set(pulse,pulse,pulse)
+      // Curse DoT: if close, apply bleed every 2s
+      d.curseTimer=(d.curseTimer||0)+1
+      if(dist<3.5 && d.curseTimer%120===0){
+        hitPlayer(0.5)  // half tick damage (hitPlayer handles invincibility)
+        d.curseTimer=1  // don't reset to 0, let it keep counting
+      }
+    }
+
+    // ── Shielder: moves in, blocks damage from front ──
+    else if(d.type==='shielder'){
+      e.position.x+=(dx/dist)*eff(d.speed)
+      e.position.z+=(dz/dist)*eff(d.speed)
+    }
+
+    // ── Tank: slow heavy charge ──
+    else if(d.type==='tank'){
+      if(dist>2.5){
+        e.position.x+=(dx/dist)*eff(d.speed)
+        e.position.z+=(dz/dist)*eff(d.speed)
+      }
+    }
+
+    // ── Sniper: tactical shooter ──
+    else if(d.type==='sniper'){
+      const OPTIMAL_MIN = 14   // ideal shooting range
+      const OPTIMAL_MAX = 20
+      const APPROACH_RANGE = 35  // start moving toward player if farther than this
+
+      // ── Movement: approach / hold / retreat ──
+      if(dist > APPROACH_RANGE){
+        // Far away — move toward player at half speed
+        e.position.x += (dx/dist)*eff(d.speed)*0.6
+        e.position.z += (dz/dist)*eff(d.speed)*0.6
+        d.sniperState = 'approaching'
+      } else if(dist > OPTIMAL_MAX){
+        // Closing in to optimal range
+        e.position.x += (dx/dist)*eff(d.speed)*0.8
+        e.position.z += (dz/dist)*eff(d.speed)*0.8
+        d.sniperState = 'closing'
+      } else if(dist < OPTIMAL_MIN){
+        // Too close — back away fast
+        e.position.x -= (dx/dist)*eff(d.speed)*1.2
+        e.position.z -= (dz/dist)*eff(d.speed)*1.2
+        d.sniperState = 'retreating'
+        // Lateral strafe while retreating (evasive)
+        const perpX = -dz/dist, perpZ = dx/dist
+        const side = Math.sin(frameCount*0.05) // oscillate side to side
+        e.position.x += perpX * eff(d.speed) * side * 0.8
+        e.position.z += perpZ * eff(d.speed) * side * 0.8
+      } else {
+        // In optimal range — strafe laterally and hold distance
+        const perpX = -dz/dist, perpZ = dx/dist
+        const strafe = Math.sin(frameCount * 0.04 + d.strafePhase) * eff(d.speed) * 0.9
+        e.position.x += perpX * strafe
+        e.position.z += perpZ * strafe
+        // Fine-tune distance
+        const distErr = dist - (OPTIMAL_MIN+OPTIMAL_MAX)/2
+        e.position.x += (dx/dist)*eff(d.speed)*0.15*(distErr>0?1:-1)
+        e.position.z += (dz/dist)*eff(d.speed)*0.15*(distErr>0?1:-1)
+        d.sniperState = 'shooting'
+      }
+
+      // ── Dodge incoming bullets ──
+      if(!d.dodgeCooldown) d.dodgeCooldown=0
+      if(d.dodgeCooldown>0) d.dodgeCooldown--
+      if(d.dodgeCooldown<=0){
+        // Detect nearby player bullets heading toward this enemy
+        let threat = false
+        for(const b of bullets){
+          if(!b.userData.fromPlayer) continue
+          const bx=b.position.x-e.position.x, bz=b.position.z-e.position.z
+          const bdist=Math.sqrt(bx*bx+bz*bz)
+          if(bdist<8){
+            // Bullet velocity direction
+            const bvx=b.userData.vx, bvz=b.userData.vz
+            const bvlen=Math.sqrt(bvx*bvx+bvz*bvz)||1
+            // Dot product: is bullet heading toward me?
+            const dot=(bvx/bvlen)*(-bx/bdist)+(bvz/bvlen)*(-bz/bdist)
+            if(dot>0.6){ threat=true; break }
+          }
+        }
+        if(threat){
+          // Dodge perpendicular to the threat
+          const perpX=-dz/dist, perpZ=dx/dist
+          const dodgeDir = Math.random()<0.5?1:-1
+          const dodgeStr = 4 + sniperDodgeBonus
+          e.position.x += perpX*dodgeDir*dodgeStr
+          e.position.z += perpZ*dodgeDir*dodgeStr
+          d.dodgeCooldown = 40
+        }
+      }
+
+      // ── Shooting: only at optimal range, using assigned weapon ──
+      if(!d.shootTimer) d.shootTimer=0
+      d.shootTimer++
+      const shootInterval = Math.max(60, 120 - Math.floor((Date.now()-gameStartTime)/60000)*8)
+      if(d.sniperState==='shooting' && d.shootTimer>=shootInterval){
+        const aimAngle = Math.atan2(dx,dz)
+        fireEnemyWeapon(d.enemyWeapon||'laser', aimAngle, e.position, td)
+        d.shootTimer = 0
+      }
+    }
+
+    // ── Mini-boss: charge + shoot spray ──
+    else if(d.type==='miniboss'){
+      e.position.x+=(dx/dist)*eff(d.speed); e.position.z+=(dz/dist)*eff(d.speed)
+      d.shootTimer++
+      if(d.shootTimer%80===0){
+        const rays=6+miniBossSpawned*2
+        for(let r=0;r<rays;r++) spawnEnemyBullet(r*(Math.PI*2/rays),7,e.position,0xaa44ff)
+      }
+      // Phase 2 at 50% HP
+      if(d.phase===1&&d.hp<=d.maxHP*.5){
+        d.phase=2; d.speed*=1.5; d.bodyMesh.material.color.setHex(0xff00ff)
+        d.origColorHex=0xff00ff; d.origEmissiveHex=0x660066
+        burst(e.position.x,e.position.z,50,0xff00ff,6); snd.boss()
+        announce('⚠ MINI BOSS ENRAGED!','#f0f')
+      }
+    }
+
+    // ── Normal: surround ──
+    else if(d.type==='normal'){
+      d.changeTimer++
+      if(d.changeTimer>120){ d.targetAngle=Math.atan2(dz,dx)+(Math.random()-.5)*Math.PI*.7; d.changeTimer=0 }
+      const tdist=7  // fixed distance, no random per frame
+      const tx=player.position.x-Math.cos(d.targetAngle)*tdist
+      const tz=player.position.z-Math.sin(d.targetAngle)*tdist
+      const nx=tx-e.position.x, nz=tz-e.position.z, nl=Math.sqrt(nx*nx+nz*nz)||1
+      e.position.x+=(nx/nl)*eff(d.speed); e.position.z+=(nz/nl)*eff(d.speed)
+    }
+
+    // ── Boss ──
+    else if(d.type==='boss'){
+      e.position.x+=(dx/dist)*eff(d.speed);e.position.z+=(dz/dist)*eff(d.speed)
+      d.shootTimer++;const interval=d.phase===3?50:d.phase===2?75:110
+      if(d.shootTimer%interval===0){const rays=d.phase===3?16:d.phase===2?10:6;for(let r=0;r<rays;r++)spawnEnemyBullet(r*(Math.PI*2/rays),6,e.position,0xff4400)}
+      if(d.phase===1&&d.hp<=d.maxHP*.6){d.phase=2;d.speed*=1.35;d.bodyMesh.material.color.setHex(0xff5500);d.bodyMesh.material.emissive.setHex(0x552200);d.origColorHex=0xff5500;d.origEmissiveHex=0x552200;burst(e.position.x,e.position.z,50,0xff5500,6);snd.boss();announce('⚡ BOSS PHASE 2 ⚡','#f80')}
+      if(d.phase===2&&d.hp<=d.maxHP*.3){d.phase=3;d.speed*=1.4;d.bodyMesh.material.color.setHex(0xff0000);d.bodyMesh.material.emissive.setHex(0x660000);d.origColorHex=0xff0000;d.origEmissiveHex=0x660000;e.scale.set(1.25,1.25,1.25);burst(e.position.x,e.position.z,80,0xff0000,8);snd.boss();announce('💀 BOSS PHASE 3 — ENRAGED 💀','#f22')}
+      updateBossBar()
+    }
+
+    // ── Enemy HP regen ──
+    if(d.regenRate>0) d.hp=Math.min(d.maxHP, d.hp+d.regenRate)
+
+    e.rotation.y=Math.atan2(dx,dz)
+
+    // Touch damage
+    if(dist<2.5 && invTimer<=0){
+      hitPlayer(enemyDamageMult*(d.dmgMult||1))
+      triggerHitFlash(e)
+      e.position.x-=(dx/dist)*4; e.position.z-=(dz/dist)*4
+    }
+  }
+  flushKills()  // process all deferred kills after the loop
+  if(invTimer>0)invTimer--
+  if(shieldTimer>0){shieldTimer--}else shieldActive=false
+  if(timeSlowTimer>0){timeSlowTimer--}else timeSlowActive=false
+  if(godTimer>0){godTimer--}else godMode=false
+  if(scoreMultiplierTimer>0){scoreMultiplierTimer--}else scoreMultiplier=1
+}
+
+// ════════════════════════════════════════════
+// ENEMY WEAPON SYSTEM
+// ════════════════════════════════════════════
+function fireEnemyWeapon(weaponId, angle, fromPos, td){
+  const w=weaponDefs[weaponId]||weaponDefs.laser
+  const spd=(w.speed||10)*0.7+td.damageMult*0.5
+  const col={shotgun:0xff8822,laser:0x4488ff,rocket:0xff4400,machinegun:0xffff44,sniper:0x44ffaa,ultimate:0xff00ff}[weaponId]||0xff4444
+  if(weaponId==='shotgun'){
+    for(let i=0;i<4;i++) spawnEnemyBullet(angle+(Math.random()-.5)*.4, spd*.8, fromPos, col)
+  } else if(weaponId==='machinegun'){
+    for(let i=0;i<2;i++) spawnEnemyBullet(angle+(Math.random()-.5)*.12, spd, fromPos, col)
+  } else if(weaponId==='rocket'){
+    spawnEnemyBullet(angle+(Math.random()-.5)*.06, spd*.7, fromPos, col)
+  } else {
+    spawnEnemyBullet(angle+(Math.random()-.5)*.08, spd, fromPos, col)
+    if(td.damageMult>1.4&&Math.random()<.35)
+      setTimeout(()=>spawnEnemyBullet(angle+(Math.random()-.5)*.12, spd, fromPos, col), 120)
+  }
+}
+
+function hitPlayer(dmgMult=1){
+  if(invTimer>0||shieldActive||godMode) return
+  // Apply fractional damage — playerHP can be fractional from high-dmgMult enemies
+  playerHP = Math.round((playerHP - dmgMult) * 100) / 100
+  invTimer=80; snd.playerHit()
+  document.getElementById('dmgFlash').style.display='block'
+  setTimeout(()=>document.getElementById('dmgFlash').style.display='none',200)
+  updateHUD()
+  if(playerHP<=0) triggerGameOver()
+}
+
+function killEnemy(idx){
+  const e=enemies[idx],d=e.userData
+  const isBig=d.type==='boss'||d.type==='miniboss'
+  burst(e.position.x,e.position.z,isBig?100:d.isElite?60:30,
+    d.type==='boss'?0xff2200:d.type==='miniboss'?0xaa44ff:d.isElite?0xffdd00:0xff8800,
+    isBig?8:d.isElite?6:4)
+  // XP drops
+  const xpCount=d.type==='boss'?5:d.type==='miniboss'?3:d.isElite?2:1
+  for(let x=0;x<xpCount;x++) spawnDrop(e.position.x+(Math.random()-.5)*2,e.position.z+(Math.random()-.5)*2,'exp')
+  if(Math.random()<weaponDropChance){ spawnDrop(e.position.x,e.position.z,'weapon',rollWeaponDrop(weaponDropChance-0.2)) }
+  const bonus=d.type==='boss'?20:d.type==='miniboss'?10:d.isElite?5:d.type==='tank'?3:1
+  score+=bonus*scoreMultiplier
+  addKF(d.type==='boss'?`💀 BOSS +${bonus*scoreMultiplier}`:
+        d.type==='miniboss'?`⚠ MINI BOSS +${bonus*scoreMultiplier}`:
+        d.isElite?`⭐ ELITE +${bonus*scoreMultiplier}`:`+${bonus*scoreMultiplier} ${d.type}`)
+  if(d.type==='boss'){bossAlive=false;bossRef=null;document.getElementById('bossBar').style.display='none';announce('✅ BOSS DEFEATED!','#0f4')}
+  else killsSinceBoss++
+  gainXP(({runner:.1,normal:.15,tank:.35,sniper:.2,teleporter:.2,cursed:.2,shielder:.3,boss:1.2,miniboss:.7}[d.type]||.15)*(d.isElite?2:1))
+  // Reset flash state so material is clean before removal
+  if(d.bodyMesh?.material && d.hitFlashFrames > 0){
+    const mat = d.bodyMesh.material
+    if(mat.emissive) mat.emissive.setHex(d.origEmissiveHex ?? 0x000000)
+    if(mat.color)    mat.color.setHex(d.origColorHex ?? 0xffffff)
+    mat.emissiveIntensity = d.origEmissiveIntensity ?? 0.5
+    d.hitFlashFrames = 0
+  }
+  // Clean up HP bar sprite to prevent texture memory leaks
+  if(d.hpBarSprite){
+    if(d.hpBarSprite.material){
+      if(d.hpBarSprite.material.map) d.hpBarSprite.material.map.dispose()
+      d.hpBarSprite.material.dispose()
+    }
+    e.remove(d.hpBarSprite)
+  }
+  scene.remove(e);enemies.splice(idx,1)
+}
+
+// ════════════════════════════════════════════
+// BULLETS
+// ════════════════════════════════════════════
+function spawnPlayerBullet(angle,speed,color=0x00ffff,pen=0.3,dmgBase=1){
+  const b=new THREE.Mesh(new THREE.SphereGeometry(.3),new THREE.MeshBasicMaterial({color:color}))
+  b.position.copy(player.position)
+  b.userData={vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,dmg:dmgBase,pen,fromPlayer:true}
+  scene.add(b);bullets.push(b)
+}
+function spawnRocket(angle,wid='rocket'){
+  const w=weaponDefs[wid]||weaponDefs.rocket
+  const b=new THREE.Mesh(new THREE.SphereGeometry(.5),new THREE.MeshBasicMaterial({color:w.color||0xff8800}))
+  b.position.copy(player.position)
+  b.userData={vx:Math.sin(angle)*w.speed*bulletSpeedMult,vz:Math.cos(angle)*w.speed*bulletSpeedMult,
+    dmg:w.dmgBase||6,pen:w.pen||1,fromPlayer:true,isRocket:true}
+  scene.add(b);bullets.push(b)
+}
+function spawnEnemyBullet(angle,speed,fromPos,color=0xff2200){
+  const b=new THREE.Mesh(new THREE.SphereGeometry(.25),new THREE.MeshBasicMaterial({color:color}))
+  b.position.copy(fromPos)
+  b.userData={vx:Math.sin(angle)*speed,vz:Math.cos(angle)*speed,fromPlayer:false}
+  scene.add(b);bullets.push(b)
+}
+
+let lastShot=0
+function getWeaponCooldown(wid){
+  const w=weaponDefs[wid]
+  return Math.max(1, Math.floor((w.cooldown||20)/fireRateMult))
+}
+function canShoot(wid){
+  const cd=weaponCooldowns[wid]||0
+  return frameCount>=cd
+}
+function setWeaponCooldown(wid){
+  weaponCooldowns[wid]=frameCount+getWeaponCooldown(wid)
+}
+
+function shoot(){
+  const wid=inventory[curWeapon]
+  if(!canShoot(wid)) return
+  setWeaponCooldown(wid)
+  const w=weaponDefs[wid]
+  snd.shoot()
+  const isExplosive=wid==='rocket'||wid==='grenade'||wid==='napalm'
+  const angles=hasTripleShot?[yaw-.2,yaw,yaw+.2]:[yaw]
+  angles.forEach(ba=>{
+    if(isExplosive){
+      // Explosive weapons: fire exactly ONE projectile per shot
+      spawnRocket(ba,wid)
+    } else {
+      const count=w.pellets||1
+      for(let i=0;i<count;i++){
+        const spread=(Math.random()-.5)*(w.spread||0)
+        spawnPlayerBullet(ba+spread, w.speed*bulletSpeedMult, w.color||0x00ffff, w.pen||0.3, w.dmgBase||1)
+      }
+    }
+  })
+}
+
+// Armor-penetration damage calculation
+// finalDmg = dmgBase * pen_ratio * damageMultiplier
+// Shielder gets double armor if bullet hits from front
+function calcDamage(baseDmg, pen, armor, enemy, bulletAngle){
+  let effectiveArmor = armor||0
+  if(enemy?.userData?.type==='shielder' && enemy?.userData?.shieldActive){
+    const ed=enemy.userData
+    const faceDot = Math.cos(bulletAngle - (enemy.rotation.y||0))
+    if(faceDot > 0.4) effectiveArmor *= 2.5
+  }
+  // Use getBulletPowerMult so projectiles scale with all upgrades + level + power
+  const totalDmgMult = getBulletPowerMult()
+  if(effectiveArmor<=0) return baseDmg * totalDmgMult
+  const ratio = Math.min(2.0, Math.max(0.1, pen/(effectiveArmor)))
+  return baseDmg * totalDmgMult * ratio
+}
+
+function explosion(x,z){
+  snd.explode();burst(x,z,60,0xffaa00,8,100)
+  const expDmgMult = getBulletPowerMult()
+  for(let i=0;i<enemies.length;i++){
+    if(!enemies[i]||!enemies[i].userData) continue
+    const d=enemies[i].position.distanceTo(new THREE.Vector3(x,1,z))
+    if(d<12){
+      const dmg=Math.max(1,Math.floor((8-d)*expDmgMult))
+      enemies[i].userData.hp-=dmg
+      triggerHitFlash(enemies[i])
+      if(enemies[i].userData.hp<=0) deferKill(i)
+    }
+  }
+}
+
+function tickBullets(){
+  for(let bi=bullets.length-1;bi>=0;bi--){
+    const b=bullets[bi],bd=b.userData
+    b.position.x+=bd.vx*.1;b.position.z+=bd.vz*.1
+    if(Math.abs(b.position.x)>300||Math.abs(b.position.z)>300){scene.remove(b);bullets.splice(bi,1);continue}
+    if(bd.fromPlayer){
+      let hit=false
+      for(let ei=enemies.length-1;ei>=0;ei--){
+        const en=enemies[ei]
+        if(!en||!en.userData) continue  // guard: already killed this frame
+        if(b.position.distanceTo(en.position)<2.6){
+          const dc=en.userData.dodgeChance||0
+          if(dc>0&&Math.random()<dc){
+            spark(b.position.x,b.position.y,b.position.z)
+            scene.remove(b);bullets.splice(bi,1);hit=true;break
+          }
+          spark(b.position.x,b.position.y,b.position.z);snd.hit()
+          const bulletAngle=Math.atan2(bd.vx,bd.vz)
+          const dmg=calcDamage(bd.dmg||1,bd.pen||0.3,en.userData.armor||0,en,bulletAngle)
+          en.userData.hp-=dmg
+          // Hit flash (frame-driven, no setTimeout — safe against rapid hits and enemy death)
+          triggerHitFlash(en)
+          if(bd.isRocket) explosion(b.position.x,b.position.z)
+          if(en.userData.hp<=0) deferKill(ei)
+          scene.remove(b);bullets.splice(bi,1);hit=true;break
+        }
+      }
+    }else{
+      if(b.position.distanceTo(player.position)<1.8){
+        hitPlayer(bd.dmgMult||1)
+        scene.remove(b);bullets.splice(bi,1)
+      }
+    }
+  }
+}
+
+// ════════════════════════════════════════════
+// DROPS — XP orbs magnetic, visually distinct
+// ════════════════════════════════════════════
+// Rarity color hex values for 3D drop meshes
+const RARITY_COLOR_HEX={gray:0x888888, green:0x44cc44, blue:0x4488ff, purple:0xaa44ff, yellow:0xffcc00, red:0xff2222}
+
+function spawnDrop(x,z,type,value){
+  let mesh
+  if(type==='exp'){
+    mesh=new THREE.Mesh(
+      new THREE.OctahedronGeometry(.4),
+      new THREE.MeshStandardMaterial({color:0xffee00,emissive:0xffaa00,emissiveIntensity:.9,transparent:true,opacity:.95})
+    )
+  } else {
+    // Weapon drop: use rarity color, star/gem shape
+    const wdef=weaponDefs[value]
+    const rarityHex=RARITY_COLOR_HEX[wdef?.rarity||'gray']||0x44ff88
+    mesh=new THREE.Mesh(
+      new THREE.OctahedronGeometry(.55),
+      new THREE.MeshStandardMaterial({color:rarityHex,emissive:rarityHex,emissiveIntensity:.7})
+    )
+  }
+  mesh.position.set(x,1.2,z)
+  scene.add(mesh)
+  drops.push({mesh,type,value,attracting:false})
+}
+
+function tickDrops(){
+  const t=Date.now()*.004
+  for(let i=drops.length-1;i>=0;i--){
+    const d=drops[i]
+    const dx=player.position.x-d.mesh.position.x
+    const dz=player.position.z-d.mesh.position.z
+    const dist=Math.sqrt(dx*dx+dz*dz)||.001
+
+    if(d.type==='exp'){
+      if(dist<pickupRadius) d.attracting=true
+      if(d.attracting){
+        // Accelerate over time — ensures orb always catches player
+        d.pullSpeed = Math.min(2.0, (d.pullSpeed||0.1) * 1.08 + 0.01)
+        // Speed scales with distance: faster when far, smooth close up
+        const effectiveSpeed = Math.max(d.pullSpeed, playerSpeed * 1.6)
+        const move = Math.min(dist, effectiveSpeed)
+        d.mesh.position.x += (dx/dist)*move
+        d.mesh.position.z += (dz/dist)*move
+        d.mesh.position.y = 1.2+Math.sin(t*6+i)*.08
+        const s=1+Math.sin(t*5+i)*.2
+        d.mesh.scale.set(s,s,s)
+      } else {
+        d.pullSpeed=0.1
+        d.mesh.position.y=1.2+Math.sin(t+i)*.18
+        d.mesh.rotation.y+=.04
+      }
+      if(dist<1.4){ collectDrop(d); scene.remove(d.mesh); drops.splice(i,1) }
+    } else {
+      // Weapon drops: bob until player walks into pickup radius
+      d.mesh.position.y=1.2+Math.sin(t+i)*.18
+      d.mesh.rotation.y+=.025
+      if(dist<pickupRadius){ collectDrop(d); scene.remove(d.mesh); drops.splice(i,1) }
+    }
+  }
+}
+function collectDrop(drop){
+  snd.pickup()
+  if(drop.type==='exp'){
+    // Flat XP gain per orb, multiplied by xpMult — doesn't shrink at high levels
+    gainXP(0.18*xpMult)
+  }
+  else if(drop.type==='weapon'&&!inventory.includes(drop.value)){
+    inventory.push(drop.value);setWeapon(inventory.length-1)
+    const wdef=weaponDefs[drop.value]
+    addKF(`🔫 ${wdef.name} [${wdef.rarity.toUpperCase()}] acquired!`)
+    recordPowerGain(['gray','green'].includes(wdef.rarity)?1:['blue'].includes(wdef.rarity)?2:['purple'].includes(wdef.rarity)?3:4)
+  }
+}
+// Pending level-ups queue — prevents stacking card screens
+let _pendingCardScreens = 0
+
+function gainXP(amount){
+  exp += amount
+  while(exp >= expToLevel){
+    exp -= expToLevel
+    level++
+    expToLevel = Math.round(expToLevel * 1.12 * 10) / 10
+    skillPoints++
+    snd.lvlup()
+    _pendingCardScreens++
+  }
+  document.getElementById('xpFill').style.width = Math.min(100,(exp/expToLevel)*100)+'%'
+  document.getElementById('xpLabel').textContent = `XP  Lv${level}`
+  // Show first queued card screen immediately if none open
+  if(_pendingCardScreens > 0 && !inCardScreen) _flushCardQueue()
+}
+
+function _flushCardQueue(){
+  if(_pendingCardScreens <= 0 || inCardScreen) return
+  _pendingCardScreens--
+  showCardScreen()
+}
+
+// ════════════════════════════════════════════
+// CARD SYSTEM
+// ════════════════════════════════════════════
+const RARITY_COLORS={common:'#888',uncommon:'#4c4',rare:'#48f',epic:'#a4f',legendary:'#fc0',mythic:'#f44',ultra:'#f0f',
+  gray:'#888',green:'#4c4',blue:'#48f',purple:'#a4f',yellow:'#fc0',red:'#f44'}
+const RARITY_WEIGHTS={common:35,uncommon:28,rare:18,epic:10,legendary:4,mythic:.9,ultra:.1}
+
+function rollRarity(){
+  const total=Object.values(RARITY_WEIGHTS).reduce((a,b)=>a+b,0); let r=Math.random()*total
+  for(const[k,v]of Object.entries(RARITY_WEIGHTS)){r-=v;if(r<=0)return k}; return 'common'
+}
+
+function unlockWeapon(wid){ if(!inventory.includes(wid)) inventory.push(wid) }
+
+function getCardPool(){
+  // Card schema: { name, category, icon, rarity, desc, effects[], levelEffects[], apply() }
+  // category: 'weapon' | 'item' | 'utility' | 'movement' | 'power'
+  return[
+    // ══════════════════
+    // ── WEAPON CARDS ──
+    // ══════════════════
+    {name:'Machine Gun',    category:'weapon', icon:'🔫', rarity:'common',
+      desc:'Rapid-fire automatic rifle with wide suppressive coverage.',
+      effects:['Unlocks Machine Gun weapon','14 bullets/sec, low recoil'],
+      levelEffects:['Lv1 → Machine Gun unlocked','Lv2 → +15% fire rate bonus','Lv3 → bullets pierce 1 extra enemy'],
+      apply:()=>unlockWeapon('machinegun')},
+    {name:'Grenade Launcher',category:'weapon',icon:'💥',rarity:'uncommon',
+      desc:'Explosive arcing projectile. Heavy damage, slow reload.',
+      effects:['Unlocks Grenade Launcher weapon','Area splash damage on impact'],
+      levelEffects:['Lv1 → Grenade unlocked','Lv2 → blast radius +20%','Lv3 → +1 grenade per shot'],
+      apply:()=>unlockWeapon('grenade')},
+    {name:'Sniper Rifle',   category:'weapon', icon:'🎯', rarity:'rare',
+      desc:'High-precision long-range weapon. Near-perfect armor penetration.',
+      effects:['Unlocks Sniper Rifle weapon','90% armor pierce, 8 base damage'],
+      levelEffects:['Lv1 → Sniper unlocked','Lv2 → +20% bullet speed','Lv3 → headshot bonus ×1.5 on elites'],
+      apply:()=>unlockWeapon('sniper')},
+    {name:'Plasma Cannon',  category:'weapon', icon:'🔵', rarity:'rare',
+      desc:'Fires 3 plasma bolts simultaneously in a tight spread.',
+      effects:['Unlocks Plasma Cannon weapon','3 projectiles, 50% armor pierce'],
+      levelEffects:['Lv1 → Plasma unlocked','Lv2 → +1 plasma bolt','Lv3 → bolts chain to nearby enemies'],
+      apply:()=>unlockWeapon('plasma')},
+    {name:'Rocket Launcher',category:'weapon', icon:'🚀', rarity:'epic',
+      desc:'Devastating explosive rocket. Full armor penetration, massive area damage.',
+      effects:['Unlocks Rocket Launcher weapon','100% armor pierce, 6 base dmg'],
+      levelEffects:['Lv1 → Rocket unlocked','Lv2 → explosion radius +25%','Lv3 → dual rockets per shot'],
+      apply:()=>unlockWeapon('rocket')},
+    {name:'Chain Gun',      category:'weapon', icon:'⛓',  rarity:'epic',
+      desc:'Extreme fire rate minigun that shreds crowds at close range.',
+      effects:['Unlocks Chain Gun weapon','Max fire rate, 1.2 base damage'],
+      levelEffects:['Lv1 → Chain Gun unlocked','Lv2 → +5% damage per kill stack','Lv3 → spin-up faster'],
+      apply:()=>unlockWeapon('chaingun')},
+    {name:'Photon Blaster', category:'weapon', icon:'⭐', rarity:'legendary',
+      desc:'Fires twin photon beams simultaneously. Legendary-tier firepower.',
+      effects:['Unlocks Photon Blaster weapon','2 beams, 70% armor pierce, 5 dmg'],
+      levelEffects:['Lv1 → Photon unlocked','Lv2 → +1 beam (3 total)','Lv3 → beams ricochet once'],
+      apply:()=>unlockWeapon('photon')},
+    {name:'Napalm Launcher',category:'weapon', icon:'🔥', rarity:'legendary',
+      desc:'4 incendiary shells per shot. Burns through armored foes.',
+      effects:['Unlocks Napalm Launcher weapon','4 pellets, 80% pierce, 7 dmg'],
+      levelEffects:['Lv1 → Napalm unlocked','Lv2 → burn DoT on hit','Lv3 → spread wider, +2 pellets'],
+      apply:()=>unlockWeapon('napalm')},
+    {name:'RAILGUN',        category:'weapon', icon:'🔴', rarity:'ultra',
+      desc:'ULTIMATE: Fires a hypervelocity slug that pierces ALL enemies on screen.',
+      effects:['Unlocks RAILGUN','15 base damage, full pierce, instant bullet'],
+      levelEffects:['Lv1 → RAILGUN unlocked','Lv2 → width doubles, hits more enemies','Lv3 → ricochet off walls'],
+      apply:()=>unlockWeapon('railgun')},
+    {name:'VOID BURST',     category:'weapon', icon:'🔮', rarity:'ultra',
+      desc:'ULTIMATE: Fires 8 void projectiles in a burst pattern every 0.2s.',
+      effects:['Unlocks VOID BURST','8 pellets, 80% pierce, 4 dmg each'],
+      levelEffects:['Lv1 → VOID BURST unlocked','Lv2 → pellets home slightly','Lv3 → +4 pellets (12 total)'],
+      apply:()=>unlockWeapon('voidburst')},
+
+    // ═════════════════
+    // ── ITEM CARDS ──
+    // ═════════════════
+    {name:'Speed Crystal',  category:'item',   icon:'💎', rarity:'common',
+      desc:'Imbues your boots with kinetic energy. Permanently increases movement speed.',
+      effects:['+15% movement speed (stacks multiplicatively)'],
+      levelEffects:['Lv1 → ×1.15 speed','Lv2 → ×1.15 again (×1.32 total)','Lv3+ → keeps stacking'],
+      apply:()=>{ playerSpeed=Math.min(MAX_PLAYER_SPEED,playerSpeed*1.15) }},
+    {name:'Speed Surge',    category:'item',   icon:'⚡', rarity:'uncommon',
+      desc:'Flat speed injection — more consistent than percentage boosts at high speed.',
+      effects:['+0.03 flat movement speed'],
+      levelEffects:['Lv1 → +0.03 flat','Lv2 → +0.03 more (stacks)','Lv3+ → pure speed stack'],
+      apply:()=>{ playerSpeed=Math.min(MAX_PLAYER_SPEED,playerSpeed+.03) }},
+    {name:'Quick Shots',    category:'item',   icon:'🏹', rarity:'common',
+      desc:'Increases bullet velocity. Faster bullets = harder to dodge and more range.',
+      effects:['+20% bullet speed (all weapons)'],
+      levelEffects:['Lv1 → ×1.2 bullet speed','Lv2 → ×1.44 total','Lv3+ → multiplicative stacking'],
+      apply:()=>{ bulletSpeedMult*=1.2 }},
+    {name:'Extra Pellets',  category:'item',   icon:'🔫', rarity:'common',
+      desc:'Modifies shotgun barrel to fire an additional pellet per shot.',
+      effects:['+1 shotgun pellet per shot'],
+      levelEffects:['Lv1 → 7 pellets total','Lv2 → 8 pellets','Lv3 → 9 pellets (keep stacking)'],
+      apply:()=>{ shotgunPellets++ }},
+    {name:'Pickup Magnet',  category:'item',   icon:'🧲', rarity:'common',
+      desc:'Increases the magnetic pull radius for XP orbs and item drops.',
+      effects:['+0.5 pickup radius','XP orbs attracted from further away'],
+      levelEffects:['Lv1 → radius +0.5','Lv2 → +0.5 more','Lv3 → +0.5 more'],
+      apply:()=>{ pickupRadius+=.5;syncPickupRing() }},
+    {name:'XP Amplifier',   category:'item',   icon:'✨', rarity:'common',
+      desc:'Boosts all XP gain. More XP = more levels = more cards.',
+      effects:['+20% all XP gain'],
+      levelEffects:['Lv1 → ×1.2 XP','Lv2 → ×1.44 total','Lv3+ → compound stacking'],
+      apply:()=>{ xpMult*=1.2 }},
+    {name:'Drop Luck',      category:'item',   icon:'🍀', rarity:'uncommon',
+      desc:'Improves weapon drop probability from enemies killed.',
+      effects:['+10% weapon drop chance'],
+      levelEffects:['Lv1 → 30% drop chance','Lv2 → 40% drop chance','Lv3 → 50% drop chance'],
+      apply:()=>{ weaponDropChance=Math.min(1,weaponDropChance+.1) }},
+    {name:'Rapid Fire Mod', category:'item',   icon:'🔁', rarity:'uncommon',
+      desc:'Universal fire rate amplifier that stacks with all weapons.',
+      effects:['+20% fire rate (all weapons)'],
+      levelEffects:['Lv1 → ×1.2 fire rate','Lv2 → ×1.44 total','Lv3+ → stack for extreme ROF'],
+      apply:()=>{ fireRateMult*=1.2 }},
+    {name:'Med Kit',        category:'item',   icon:'❤️', rarity:'uncommon',
+      desc:'Instantly restores 1 HP. Simple and effective healing.',
+      effects:['Restore 1 HP immediately','No cooldown, immediate effect'],
+      levelEffects:['Lv1 → +1 HP','Lv2 → +1 HP again','Lv3 → +1 HP (heals each pick)'],
+      apply:()=>{ if(playerHP<maxPlayerHP){playerHP++;updateHUD()} }},
+    {name:'Power Surge',    category:'item',   icon:'💥', rarity:'rare',
+      desc:'Major damage amplifier. Multiplicative — scales better than additive.',
+      effects:['+40% all damage (multiplicative)'],
+      levelEffects:['Lv1 → ×1.4 dmg','Lv2 → ×1.96 total','Lv3 → ×2.74 total'],
+      apply:()=>{ damageMultiplier*=1.4 }},
+    {name:'Max HP Up',      category:'item',   icon:'💗', rarity:'rare',
+      desc:'Permanently increases maximum health and restores the extra HP.',
+      effects:['+2 max HP, restores those HP immediately'],
+      levelEffects:['Lv1 → max HP +2','Lv2 → max HP +4 total','Lv3 → max HP +6 total'],
+      apply:()=>{ maxPlayerHP+=2;playerHP+=2;updateHUD() }},
+    {name:'Armor Shredder', category:'item',   icon:'🗡️', rarity:'rare',
+      desc:'Sharpens all projectiles to punch through armor more efficiently.',
+      effects:['+25% armor penetration (all weapons)'],
+      levelEffects:['Lv1 → pen ×1.25','Lv2 → pen ×1.56 total','Lv3 → pen ×1.95 total'],
+      apply:()=>{ Object.values(weaponDefs).forEach(w=>{if(w.pen)w.pen=Math.min(1,w.pen*1.25)}) }},
+    {name:'Wide Collector',  category:'item',   icon:'🌊', rarity:'rare',
+      desc:'Dramatically extends pickup radius. Collect XP without moving.',
+      effects:['+1.5 pickup radius (large jump)'],
+      levelEffects:['Lv1 → radius +1.5','Lv2 → +1.5 more (4.5 total)','Lv3 → +1.5 (6 total)'],
+      apply:()=>{ pickupRadius+=1.5;syncPickupRing() }},
+
+    // ════════════════════
+    // ── UTILITY CARDS ──
+    // ════════════════════
+    {name:'Triple Shot',    category:'utility', icon:'🔱', rarity:'epic',
+      desc:'Modifies your weapon to fire 3 parallel projectiles simultaneously.',
+      effects:['All weapons fire 3 projectiles side-by-side','Angles: -0.2 / 0 / +0.2 radians'],
+      levelEffects:['Lv1 → Triple shot active','Lv2 → spread tightens to ±0.12','Lv3 → 5-way spread'],
+      apply:()=>{ hasTripleShot=true }},
+    {name:'Energy Shield',  category:'utility', icon:'🛡️', rarity:'epic',
+      desc:'Activates a personal force field that blocks all incoming damage.',
+      effects:['Complete invincibility for 10 seconds','Visual shield indicator in HUD'],
+      levelEffects:['Lv1 → 10s shield','Lv2 → 15s shield','Lv3 → 20s shield + auto-recharge'],
+      apply:()=>{ shieldActive=true;shieldTimer=Math.max(shieldTimer,600) }},
+    {name:'Time Distortion', category:'utility',icon:'⏳', rarity:'epic',
+      desc:'Bends time itself — all enemies move and shoot at 30% speed.',
+      effects:['All enemies slowed to 30% for 15 seconds','Your speed unaffected'],
+      levelEffects:['Lv1 → 15s slow','Lv2 → 22s slow','Lv3 → 30s + you get speed boost'],
+      apply:()=>{ timeSlowActive=true;timeSlowTimer=Math.max(timeSlowTimer,900) }},
+    {name:'Sniper Counter',  category:'utility',icon:'👁️', rarity:'rare',
+      desc:'Counterintelligence module that disrupts enemy sniper dodge AI.',
+      effects:['Enemy snipers dodge less effectively','-1 dodge strength per pick'],
+      levelEffects:['Lv1 → snipers dodge -1','Lv2 → snipers dodge -2','Lv3 → snipers barely dodge'],
+      apply:()=>{ sniperDodgeBonus=Math.max(-3,sniperDodgeBonus-1) }},
+    {name:'God Mode',       category:'utility', icon:'⭐', rarity:'legendary',
+      desc:'LEGENDARY: Total invincibility — no damage, no knockback, 30 seconds.',
+      effects:['30 seconds of full invincibility','Enemies cant damage you at all'],
+      levelEffects:['Lv1 → 30s god mode','Lv2 → 45s god mode','Lv3 → 60s god mode'],
+      apply:()=>{ godMode=true;godTimer=Math.max(godTimer,1800) }},
+    {name:'Mass Explosion',  category:'utility',icon:'💣', rarity:'legendary',
+      desc:'LEGENDARY: Triggers a devastating explosion on every enemy on screen.',
+      effects:['All current enemies take massive explosion damage','Instant screen clear'],
+      levelEffects:['Lv1 → clears screen','Lv2 → explosion radius +30%','Lv3 → double explosion'],
+      apply:()=>{ [...enemies].forEach(e=>explosion(e.position.x,e.position.z)) }},
+    {name:'Score Multiplier',category:'utility',icon:'🏆', rarity:'legendary',
+      desc:'LEGENDARY: Multiplies score gain ×5 for 2 full minutes.',
+      effects:['×5 score multiplier for 120 seconds','Shown in HUD while active'],
+      levelEffects:['Lv1 → ×5 for 2min','Lv2 → ×7 for 2min','Lv3 → ×10 for 3min'],
+      apply:()=>{ scoreMultiplier=Math.max(scoreMultiplier,5);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,7200) }},
+    {name:'Arsenal',        category:'utility', icon:'🗃️', rarity:'legendary',
+      desc:'LEGENDARY: Instantly unlocks all non-ultimate weapons.',
+      effects:['Unlocks: Shotgun, MG, Laser, Grenade, Sniper, Plasma, Rocket, Chain'],
+      levelEffects:['Lv1 → all non-ultimate unlocked','Lv2 → boosts all weapon dmg +10%','Lv3 → +20% boost total'],
+      apply:()=>{ Object.keys(weaponDefs).filter(w=>weaponDefs[w].rarity!=='red').forEach(unlockWeapon) }},
+
+    // ══════════════════════
+    // ── MOVEMENT CARDS ──
+    // ══════════════════════
+    {name:'Blink Step',     category:'movement',icon:'🔮',rarity:'epic',
+      desc:'MOVEMENT: Replaces dash with an instant teleport. No travel time, invincible during blink.',
+      effects:['Replaces Dash → Blink teleport','Teleports 18 units forward','Brief invincibility on blink (0.25s)','Cooldown: 1 second'],
+      levelEffects:['Lv1 → Blink active, 18u range','Lv2 → +2 blink charges','Lv3 → range +5u + shorter cooldown'],
+      apply:()=>{
+        movementAbility='blink'
+        if(blinkCharges===0) blinkCharges=1
+        announce('🔮 BLINK STEP unlocked! Q to teleport forward','#a4f')
+      }},
+    {name:'Phase Shift',    category:'movement',icon:'👻',rarity:'epic',
+      desc:'MOVEMENT: Briefly phases through reality — untouchable and invisible for 0.8s.',
+      effects:['Replaces Dash → Phase Shift','Full invincibility for 0.8s','Pass through enemies during phase','Cooldown: 3 seconds'],
+      levelEffects:['Lv1 → 0.8s phase','Lv2 → 1.2s phase + visual FX','Lv3 → emit damage pulse on exit'],
+      apply:()=>{
+        movementAbility='phase'
+        announce('👻 PHASE SHIFT unlocked! Q to phase through enemies','#c8f')
+      }},
+    {name:'Void Step',      category:'movement',icon:'🌌',rarity:'legendary',
+      desc:'MOVEMENT: Warps to any location within 30 units. Enemies near landing take shockwave.',
+      effects:['Replaces Dash → Void Step','Teleports toward aim direction 30u','Landing shockwave stuns nearby enemies 1s','Cooldown: 1.5 seconds'],
+      levelEffects:['Lv1 → Void Step active, 30u','Lv2 → shockwave radius +50%','Lv3 → shockwave does damage'],
+      apply:()=>{
+        movementAbility='void_step'
+        announce('🌌 VOID STEP unlocked! Q to warp with shockwave','#80f')
+      }},
+    {name:'Hyper Dash',     category:'movement',icon:'💨',rarity:'uncommon',
+      desc:'MOVEMENT: Supercharges your normal dash — longer distance and shorter cooldown.',
+      effects:['Enhances Dash movement','Distance: 7 → 11 units','Cooldown reduced by 25%'],
+      levelEffects:['Lv1 → 11u dash, -25% CD','Lv2 → 13u + -35% CD','Lv3 → 15u + -50% CD'],
+      apply:()=>{
+        dashCooldownMax=Math.max(30,Math.round(dashCooldownMax*0.75))
+        if(movementAbility==='dash') announce('💨 HYPER DASH upgraded! Faster and farther','#6fc')
+      }},
+
+    // ═══════════════════
+    // ── POWER CARDS ──
+    // ═══════════════════
+    {name:'Mythic Power',   category:'power',   icon:'🌟', rarity:'mythic',
+      desc:'MYTHIC: Doubles every offensive and defensive stat simultaneously.',
+      effects:['×2 movement speed (capped)','×2 damage multiplier','×2 max HP + full heal'],
+      levelEffects:['Lv1 → all stats ×2','Lv2 → all stats ×2 again (×4 from base)','Lv3 → ×2 more (×8 from base)'],
+      apply:()=>{ playerSpeed=Math.min(MAX_PLAYER_SPEED,playerSpeed*2);damageMultiplier*=2;maxPlayerHP=Math.ceil(maxPlayerHP*2);playerHP=maxPlayerHP;updateHUD() }},
+    {name:'Wipe Protocol',  category:'power',   icon:'☠️', rarity:'mythic',
+      desc:'MYTHIC: Instantly destroys every enemy currently on screen.',
+      effects:['All enemies die immediately','Full XP and score rewards granted'],
+      levelEffects:['Lv1 → instant wipe','Lv2 → wipe + 5s invincibility','Lv3 → wipe + score ×5 for 30s'],
+      apply:()=>{ for(let i=enemies.length-1;i>=0;i--)killEnemy(i) }},
+    {name:'Ultra Score',    category:'power',   icon:'💫', rarity:'mythic',
+      desc:'MYTHIC: ×10 score multiplier for 5 full minutes.',
+      effects:['×10 score multiplier for 5 minutes'],
+      levelEffects:['Lv1 → ×10 for 5min','Lv2 → ×15 for 5min','Lv3 → ×25 for 10min'],
+      apply:()=>{ scoreMultiplier=Math.max(scoreMultiplier,10);scoreMultiplierTimer=Math.max(scoreMultiplierTimer,18000) }},
+    {name:'RAINBOW MODE',   category:'power',   icon:'🌈', rarity:'ultra',
+      desc:'ULTRA: All stats boosted ×1.5 simultaneously. Pure power amplification.',
+      effects:['×1.5 speed, ×1.5 damage, ×1.5 bullet speed','+3 max HP, +1 pickup radius','Everything enhanced at once'],
+      levelEffects:['Lv1 → all stats ×1.5','Lv2 → all stats ×1.5 again','Lv3 → divine ascension tier'],
+      apply:()=>{ playerSpeed=Math.min(MAX_PLAYER_SPEED,playerSpeed*1.5);damageMultiplier*=1.5;bulletSpeedMult*=1.5;maxPlayerHP+=3;playerHP=maxPlayerHP;pickupRadius+=1;syncPickupRing();updateHUD() }},
+  ]
+}
+
+// Record picked upgrade into display panel
+function recordUpgrade(name,desc){
+  if(!pickedUpgrades[name]){ pickedUpgrades[name]={lv:1,desc} }
+  else{ pickedUpgrades[name].lv++ }
+}
+
+// Category meta — colors, labels
+const CAT_META={
+  weapon:   {label:'WEAPON',   color:'#f88', bg:'rgba(255,80,80,.18)',  band:'#f55'},
+  item:     {label:'ITEM',     color:'#8df', bg:'rgba(80,200,255,.14)', band:'#4af'},
+  utility:  {label:'UTILITY',  color:'#c9f', bg:'rgba(180,120,255,.16)',band:'#a4f'},
+  movement: {label:'MOVEMENT', color:'#6fc', bg:'rgba(80,255,160,.14)', band:'#0f8'},
+  power:    {label:'POWER',    color:'#fd6', bg:'rgba(255,200,60,.14)', band:'#fa0'},
+}
+
+function buildCardEl(card){
+  const col=RARITY_COLORS[card.rarity]||'#888'
+  const cat=CAT_META[card.category]||CAT_META.item
+  const existingLv=pickedUpgrades[card.name]?.lv||0
+  const isNew=existingLv===0
+  const nextLv=existingLv+1
+
+  const el=document.createElement('div')
+  el.className='card'
+  el.style.cssText=`border-color:${col};box-shadow:0 0 18px ${col}33,0 4px 20px rgba(0,0,0,.6)`
+
+  // Effects list HTML
+  const effectsHTML=card.effects.map(e=>
+    `<div class="card-effect-row"><span class="card-effect-icon">▸</span><span class="card-effect-text">${e}</span></div>`
+  ).join('')
+
+  // Level preview: show current level's effect and next
+  const levelsHTML=card.levelEffects && card.levelEffects.length ? `
+    <div class="card-levels">
+      ${existingLv>0?`<div class="lv-current">✔ Current: ${card.levelEffects[Math.min(existingLv-1,card.levelEffects.length-1)]}</div>`:''}
+      <div class="lv-next">→ Picking: ${card.levelEffects[Math.min(existingLv,card.levelEffects.length-1)]}</div>
+      ${existingLv+1<card.levelEffects.length?`<div style="color:#678">Preview Lv${existingLv+2}: ${card.levelEffects[existingLv+1]}</div>`:''}
+    </div>` : ''
+
+  el.innerHTML=`
+    <div class="card-band" style="background:${cat.band}"></div>
+    <div class="card-head">
+      <div class="card-cat-row">
+        <span class="card-cat cat-${card.category}">${cat.label}</span>
+        <span class="card-rarity" style="color:${col}">${card.rarity.toUpperCase()}</span>
+      </div>
+      <div class="card-name" style="color:${col}">${card.icon} ${card.name}</div>
+      <div class="card-lv-row">
+        ${isNew?'<span class="card-new-badge">NEW</span>':
+          `<span class="card-lv-badge">Lv ${existingLv} → ${nextLv}</span>`}
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:10px;color:#89a;margin-bottom:4px;line-height:1.4">${card.desc}</div>
+      <div class="card-divider"></div>
+      ${effectsHTML}
+    </div>
+    ${levelsHTML}
+    <button class="card-pick" style="background:${col}22;color:${col};border-top:1px solid ${col}33">
+      ${isNew?'✦ PICK CARD':'⬆ UPGRADE  Lv'+nextLv}
+    </button>`
+
+  el.addEventListener('click',()=>{
+    card.apply()
+    recordUpgrade(card.name, card.effects[0])
+    recordPowerGain(card.rarity==='mythic'?6:card.rarity==='ultra'?8:card.rarity==='legendary'?4:card.rarity==='epic'?3:card.rarity==='rare'?2:1)
+    updateInfoPanel()
+    hideCardScreen()
+  })
+  return el
+}
+
+function showCardScreen(){
+  inCardScreen=true
+  if(document.pointerLockElement===document.body) document.exitPointerLock()
+  const pool=getCardPool(), chosen=[], used=new Set()
+  let attempts=0
+  while(chosen.length<3 && attempts<500){
+    attempts++
+    const rarity=rollRarity()
+    const avail=pool.filter((c,i)=>c.rarity===rarity&&!used.has(i))
+    if(!avail.length) continue
+    const pick=pool.indexOf(avail[Math.floor(Math.random()*avail.length)])
+    used.add(pick); chosen.push(pool[pick])
+  }
+  // Guarantee at least 3 cards even if rarity rolls keep missing
+  while(chosen.length<3){
+    const remaining=pool.filter((_,i)=>!used.has(i))
+    if(!remaining.length) break
+    const pick=pool.indexOf(remaining[Math.floor(Math.random()*remaining.length)])
+    used.add(pick); chosen.push(pool[pick])
+  }
+
+  document.getElementById('cardSubtitle').textContent=
+    `Level ${level} — Power Score: ${playerPowerScore} pts · Enemy Strength ×${getPlayerPowerMult().toFixed(1)}`
+
+  const row=document.getElementById('cardRow')
+  row.innerHTML=''
+  chosen.forEach(card=>row.appendChild(buildCardEl(card)))
+  document.getElementById('cardScreen').classList.add('on')
+}
+function hideCardScreen(){
+  inCardScreen=false
+  document.getElementById('cardScreen').classList.remove('on')
+  // Show next queued card screen if any pending
+  if(_pendingCardScreens > 0) setTimeout(_flushCardQueue, 120)
+}
+
+// ════════════════════════════════════════════
+// PLAYER INFO PANEL
+// ════════════════════════════════════════════
+function updateInfoPanel(){
+  const el=document.getElementById('upgradeList')
+  const entries=Object.entries(pickedUpgrades)
+  if(!entries.length){ el.innerHTML='<span style="color:#555;font-size:10px">No upgrades yet</span>'; return }
+  // Enrich with card meta if available
+  const pool=getCardPool()
+  const cardMeta={}
+  pool.forEach(c=>{ cardMeta[c.name]={icon:c.icon||'',cat:c.category||'item'} })
+  el.innerHTML=entries.map(([name,{lv,desc}])=>{
+    const meta=cardMeta[name]||{}
+    const cat=CAT_META[meta.cat]||CAT_META.item
+    return `<div class="upg-row" title="${desc||''}">
+      <span class="upg-name" style="color:${cat.color}">${meta.icon||''} ${name}</span>
+      <span class="upg-lv">Lv${lv}</span>
+    </div>`
+  }).join('')
+}
+
+// ════════════════════════════════════════════
+// SKILL TREE
+// ════════════════════════════════════════════
+function renderSkillTree(){
+  const grid=document.getElementById('skillGrid')
+  grid.innerHTML=''
+  document.getElementById('sp2').textContent=skillPoints
+  // Update title with power score context
+  document.getElementById('skillTitle').textContent=`⬡ SKILL TREE  [Power: ${playerPowerScore}]`
+
+  Object.entries(skills).forEach(([id,sk])=>{
+    const cost=getSkillCost(sk)
+    const canBuy=skillPoints>=cost
+    const div=document.createElement('div')
+    div.className='snode '+(canBuy?'can':'locked')
+
+    // Next level description
+    const nextEffect=id==='hp'?`+1 Max HP → ${maxPlayerHP+1}`
+      :id==='spd'?`Speed ×1.10 → ~${(playerSpeed*1.10).toFixed(3)}`
+      :id==='dmg'?`Dmg ×1.20 → ×${(damageMultiplier*1.20).toFixed(2)}`
+      :id==='fire'?`Fire ×1.12 → ×${(fireRateMult*1.12).toFixed(2)}`
+      :id==='range'?`Pickup +0.6 → ${(pickupRadius+0.6).toFixed(1)}`
+      :id==='xpb'?`XP ×1.20 → ×${(xpMult*1.20).toFixed(2)}`
+      :id==='pen'?`Pierce ×1.15 per weapon`
+      :id==='dash'?`CD -12 → ${Math.max(30,dashCooldownMax-12)}f`
+      :sk.desc
+
+    div.innerHTML=`
+      <div class="sn-name">${sk.icon} ${sk.name}</div>
+      <div class="sn-info">Lv ${sk.lv} · Cost: <span style="color:${canBuy?'#ff0':'#666'}">${cost} SP</span></div>
+      ${canBuy?`<div style="font-size:9px;color:#6f6;margin-top:2px">▸ ${nextEffect}</div>`
+              :`<div style="font-size:9px;color:#456;margin-top:2px">${sk.desc}</div>`}
+    `
+    if(canBuy) div.addEventListener('click',()=>{
+      skillPoints-=cost; sk.lv++; sk.apply(sk.lv)
+      recordPowerGain(Math.ceil(cost*0.7))
+      renderSkillTree(); updateHUD()
+    })
+    grid.appendChild(div)
+  })
+}
+function showSkillTree(){
+  if(inChestScreen) return
+  // If card screen is open, close it first then open skill tree
+  if(inCardScreen){ hideCardScreen() }
+  inSkillScreen=true
+  renderSkillTree()
+  document.getElementById('skillScreen').classList.add('on')
+  if(document.pointerLockElement===document.body) document.exitPointerLock()
+}
+function hideSkillTree(){ inSkillScreen=false; document.getElementById('skillScreen').classList.remove('on') }
+
+// ════════════════════════════════════════════
+// UI
+// ════════════════════════════════════════════
+function setPause(v){
+  paused=v
+  if(v){
+    mouseHeld=false; joyDX=0; joyDZ=0
+    // Show live stats in pause sub-text
+    const abilityNames={dash:'Dash',blink:'Blink',phase:'Phase',void_step:'Void Step'}
+    const elapsed=Math.floor((Date.now()-gameStartTime)/1000)
+    const m=Math.floor(elapsed/60),s=elapsed%60
+    document.getElementById('pauseSub').innerHTML=
+      `P / ESC to resume &nbsp;·&nbsp; K = Skills<br>`+
+      `<span style="color:#ff0;font-size:0.8em">`+
+      `Lv ${level} &nbsp; Score: ${score} &nbsp; ${m}:${s.toString().padStart(2,'0')}`+
+      `&nbsp; ${abilityNames[movementAbility]||'Dash'} [Q]</span>`
+  }
+  document.getElementById('pauseScreen').classList.toggle('on',v)
+}
+function announce(msg,color='#f88'){ const el=document.getElementById('announce');el.textContent=msg;el.style.color=color;el.style.display='block';clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',2800) }
+function addKF(msg){ const kf=document.getElementById('killFeed'),d=document.createElement('div');d.className='kf';d.style.color='#fa8';d.textContent=msg;kf.appendChild(d);setTimeout(()=>{if(d.parentNode)kf.removeChild(d)},2600) }
+function triggerGameOver(){
+  dead=true
+  const e=Math.floor((Date.now()-gameStartTime)/1000),m=Math.floor(e/60),s=e%60
+  const abilityNames={dash:'Dash',blink:'Blink',phase:'Phase Shift',void_step:'Void Step'}
+  const upgradeCount=Object.keys(pickedUpgrades).length
+  const totalUpgradeLevels=Object.values(pickedUpgrades).reduce((a,b)=>a+(b.lv||0),0)
+  const skillLevels=Object.values(skills).reduce((a,sk)=>a+sk.lv,0)
+  document.getElementById('goStats').innerHTML=
+    `Score: <b style="color:#ff0">${score}</b><br>`+
+    `Level: ${level} &nbsp;·&nbsp; Wave: ${waveNum}<br>`+
+    `Time: ${m}:${s.toString().padStart(2,'0')}<br>`+
+    `Cards: ${upgradeCount} types (${totalUpgradeLevels} total levels)<br>`+
+    `Skill Points spent: ${skillLevels}<br>`+
+    `Ability: ${abilityNames[movementAbility]||movementAbility}<br>`+
+    `Power Score: ${playerPowerScore} pts`
+  document.getElementById('gameOver').classList.add('on')
+}
+
+function updateHUD(){
+  document.getElementById('score').textContent=score
+  document.getElementById('level').textContent=level
+  document.getElementById('sp').textContent=skillPoints
+  // ── HP Bar ──
+  const hpPct=Math.max(0,Math.min(100,playerHP/maxPlayerHP*100))
+  const hpFill=document.getElementById('hpBarFill')
+  const hpPctEl=document.getElementById('hpBarPct')
+  hpFill.style.width=hpPct+'%'
+  hpFill.classList.remove('low','critical')
+  if(hpPct<=25) hpFill.classList.add('critical')
+  else if(hpPct<=50) hpFill.classList.add('low')
+  hpPctEl.textContent=Math.round(hpPct)+'%'
+  // Weapon name + cooldown bar
+  const wid=inventory[curWeapon], w=weaponDefs[wid]||weaponDefs.shotgun
+  const cdLeft=Math.max(0,(weaponCooldowns[wid]||0)-frameCount)
+  const cdMax=getWeaponCooldown(wid)
+  const readyPct=cdLeft>0?Math.round((1-cdLeft/cdMax)*100):100
+  document.getElementById('weapon').textContent=`${w.name} [${Math.round((w.pen||.3)*100)}% pen]`
+  const bar=document.getElementById('weaponBar')
+  bar.style.width=readyPct+'%'
+  bar.style.background=readyPct>=100?'#0ff':`rgba(255,150,0,${.5+readyPct/200})`
+  let ab=[]
+  if(shieldActive)ab.push(`🛡 ${Math.ceil(shieldTimer/60)}s`)
+  if(timeSlowActive)ab.push(`⏳ ${Math.ceil(timeSlowTimer/60)}s`)
+  if(godMode)ab.push(`⭐ GOD ${Math.ceil(godTimer/60)}s`)
+  if(scoreMultiplier>1)ab.push(`✖${scoreMultiplier}`)
+  document.getElementById('abilityStatus').textContent=ab.join('  ')
+  const abilityNames={dash:'Dash',blink:'Blink',phase:'Phase',void_step:'Void Step',warp:'Warp'}
+  const abilityName=abilityNames[movementAbility]||'Dash'
+  document.getElementById('dashStatus').textContent=dashCD>0?`${abilityName} ${Math.ceil(dashCD/60)}s…`:`${abilityName} [Q] ready`
+  const mb=document.getElementById('multBadge');if(scoreMultiplier>1){mb.style.display='inline';mb.textContent=`×${scoreMultiplier}`}else mb.style.display='none'
+  // Power score line
+  const pm=getPlayerPowerMult()
+  const powerEl=document.getElementById('powerHudLine')
+  if(powerEl) powerEl.textContent=playerPowerScore>0?`⚡ ${playerPowerScore}pts → ×${pm.toFixed(1)} enemy`:''
+  // Fix HP display: show 1 decimal if fractional
+  const hpDisplay=Number.isInteger(playerHP)?Math.max(0,playerHP):Math.max(0,playerHP).toFixed(1)
+  document.getElementById('hpBarText').textContent=`❤ HP ${hpDisplay}/${maxPlayerHP}`
+}
+function updateBossBar(){ if(!bossRef)return; document.getElementById('bossFill').style.width=Math.max(0,bossRef.userData.hp/bossMaxHP*100)+'%' }
+
+// ════════════════════════════════════════════
+// CAMERA — Roblox orbit
+// ════════════════════════════════════════════
+
+function updateCamera(){
+  const cx=player.position.x-Math.sin(yaw)*Math.cos(pitch)*camDist
+  const cy=player.position.y+Math.sin(pitch)*camDist
+  const cz=player.position.z-Math.cos(yaw)*Math.cos(pitch)*camDist
+  camera.position.set(cx,cy,cz)
+  camera.lookAt(player.position.x,player.position.y+1,player.position.z)
+}
+
+// ════════════════════════════════════════════
+// INPUT
+// ════════════════════════════════════════════
+function setWeapon(i){ curWeapon=(i+inventory.length)%inventory.length; document.getElementById('weapon').textContent=weaponDefs[inventory[curWeapon]].name }
+const enterPL=()=>{
+  if(document.pointerLockElement!==document.body)
+    document.body.requestPointerLock().catch(()=>{})
+}
+const exitPL=()=>{
+  if(document.pointerLockElement===document.body) document.exitPointerLock()
+}
+
+function setShiftLock(v){
+  shiftLock=v
+  if(v){
+    document.body.style.cursor='none'
+    if(!isTouchDevice()) enterPL()  // pointer lock ไม่รองรับบนมือถือ
+    showSLI(true)
+  } else {
+    document.body.style.cursor=''
+    if(!isTouchDevice()) exitPL()
+    showSLI(false)
+  }
+}
+function showSLI(on){
+  let el=document.getElementById('slI')
+  if(!el){
+    el=document.createElement('div');el.id='slI'
+    el.style.cssText='position:fixed;bottom:50px;left:50%;transform:translateX(-50%);color:#0ff;font-size:11px;letter-spacing:2px;pointer-events:none;z-index:10;opacity:.7'
+    document.body.appendChild(el)
+  }
+  el.textContent=on?'🔒 SHIFT LOCK':''
+}
+
+document.addEventListener('pointerlockchange',()=>{
+  const locked=!!document.pointerLockElement
+  if(locked){
+    _skipNextMouseDelta=true  // skip first delta to prevent camera jump on lock acquire
+  } else {
+    isDragging=false
+    // บนมือถือ pointer lock ไม่ได้ใช้งาน อย่า reset shiftLock
+    if(shiftLock && !isTouchDevice()){ shiftLock=false; showSLI(false); document.body.style.cursor='' }
+  }
+})
+
+// Re-acquire pointer lock if shift lock is ON but lock was lost (e.g. user pressed Escape)
+document.addEventListener('click',()=>{
+  if(shiftLock && document.pointerLockElement!==document.body) enterPL()
+})
+
+// Track last mouse position for fallback delta when pointer lock is unavailable
+let _lastMouseX=0, _skipNextMouseDelta=false
+document.addEventListener('keydown',e=>{
+  // Spacebar restarts when game over
+  if(dead && e.code==='Space'){ location.reload(); return }
+  if(dead)return
+  if(e.key==='p'||e.key==='P'||e.key==='Escape'){
+    if(inSkillScreen){ hideSkillTree(); return }
+    if(!inCardScreen&&!inChestScreen) setPause(!paused)
+    return
+  }
+  if(e.key==='k'||e.key==='K'){
+    e.preventDefault()
+    if(inChestScreen) return
+    if(inSkillScreen){ hideSkillTree() } else { showSkillTree() }
+    return
+  }
+  if(inCardScreen||inSkillScreen||inChestScreen||paused)return
+  if(e.code==='KeyF'){keys={};shiftHeld=false;return}
+  if(e.code==='KeyQ'&&dashCD<=0){
+    dashCD=getAbilityCD()
+    triggerMovementAbility()
+    return
+  }
+  if(e.key==='Tab'){e.preventDefault();setWeapon(curWeapon+1);return}
+  // Use e.code for physical key tracking
+  keys[e.code]=true
+  if(e.code===cfg.keys.shoot) shoot()
+  if((e.code===cfg.keys.shift||e.code==='ShiftRight')&&!shiftHeld){shiftHeld=true;setShiftLock(!shiftLock)}
+})
+document.addEventListener('keyup',e=>{
+  keys[e.code]=false
+  if(e.code===cfg.keys.shift||e.code==='ShiftRight') shiftHeld=false
+})
+document.addEventListener('mousedown',e=>{
+  if(dead||inCardScreen||inSkillScreen||inChestScreen||paused)return
+  if(e.button===2){
+    isDragging=true
+    _lastMouseX=e.clientX
+    enterPL()  // always request fresh lock when dragging starts
+  }
+  if(e.button===0){mouseHeld=true;shoot()}
+})
+document.addEventListener('mouseup',e=>{
+  if(e.button===2){isDragging=false;if(!shiftLock)exitPL()}
+  if(e.button===0){mouseHeld=false}
+})
+document.addEventListener('contextmenu',e=>e.preventDefault())
+document.addEventListener('mousemove',e=>{
+  if(dead||inCardScreen||inSkillScreen||inChestScreen||paused)return
+  if(!isDragging&&!shiftLock)return
+
+  // Skip first event after pointer lock acquired to prevent camera jump
+  if(_skipNextMouseDelta){ _skipNextMouseDelta=false; return }
+  let deltaX=e.movementX, deltaY=e.movementY
+  if(Math.abs(deltaX)>150) deltaX=0
+  if(Math.abs(deltaY)>150) deltaY=0
+  yaw-=deltaX*cfg.sens
+  pitch=Math.max(PITCH_MIN,Math.min(PITCH_MAX,pitch+deltaY*cfg.sens))
+  _lastMouseX=e.clientX
+})
+document.addEventListener('wheel',e=>{
+  if(dead||inCardScreen||inSkillScreen||inChestScreen||paused)return
+  if(e.ctrlKey||e.altKey){camDist=Math.max(10,Math.min(60,camDist+e.deltaY*.05));e.preventDefault()}
+  else setWeapon(curWeapon+(e.deltaY>0?1:-1))
+},{passive:false})
+
+// Settings
+// Settings key capture — click a field then press any key to rebind (captures e.code)
+;['kFwd','kBwd','kLft','kRgt','kShoot','kShift'].forEach(id=>{
+  const el=document.getElementById(id)
+  el.addEventListener('focus',()=>{ el.style.borderColor='#ff0'; el.placeholder='Press a key…' })
+  el.addEventListener('blur',()=>{ el.style.borderColor='' })
+  el.addEventListener('keydown',ev=>{
+    ev.preventDefault(); ev.stopPropagation()
+    const label=ev.key.length===1?ev.key.toUpperCase():ev.key
+    el.value=`${label} (${ev.code})`
+    el.dataset.code=ev.code
+    el.blur()
+  })
+})
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  const p=document.getElementById('settingsPanel')
+  p.style.display=p.style.display==='none'?'block':'none'
+})
+document.getElementById('saveSets').addEventListener('click',()=>{
+  cfg.sens=parseFloat(document.getElementById('senInput').value)||cfg.sens
+  const getCode=(id,fallback)=>document.getElementById(id).dataset.code||fallback
+  cfg.keys.fwd   = getCode('kFwd','KeyW')
+  cfg.keys.bwd   = getCode('kBwd','KeyS')
+  cfg.keys.lft   = getCode('kLft','KeyA')
+  cfg.keys.rgt   = getCode('kRgt','KeyD')
+  cfg.keys.shoot = getCode('kShoot','Space')
+  cfg.keys.shift = getCode('kShift','ShiftLeft')
+  keys={}
+  document.getElementById('settingsPanel').style.display='none'
+})
+document.getElementById('closeSkill').addEventListener('click',hideSkillTree)
+
+// ════════════════════════════════════════════
+// TIME / DIFFICULTY
+// ════════════════════════════════════════════
+function updateTime(){
+  diffMult=baseDiff()
+  const elapsed=Math.floor((Date.now()-gameStartTime)/1000)
+  const m=Math.floor(elapsed/60), s=elapsed%60
+  const abilityIcons={dash:'💨',blink:'🔮',phase:'👻',void_step:'🌌'}
+  const abilityIcon=abilityIcons[movementAbility]||'💨'
+  document.getElementById('timeBadge').textContent=`${m}:${s.toString().padStart(2,'0')}  ${abilityIcon} ${movementAbility.replace('_',' ')}  ×${diffMult.toFixed(1)}`
+  if(m>lastMinNotified&&m>0){
+    lastMinNotified=m
+    const msgs=['1 min — enemies grow stronger…','2 min — adapting!','3 min — speed increasing!','4 min — boss enraged!','5 min — LEGENDARY!']
+    announce(msgs[Math.min(m-1,msgs.length-1)],'#fa0')
+  }
+}
+
+// ════════════════════════════════════════════
+// MOVEMENT ABILITIES
+// ════════════════════════════════════════════
+function triggerMovementAbility(){
+  const fx=Math.sin(yaw), fz=Math.cos(yaw)
+  switch(movementAbility){
+    case 'dash':{
+      // Standard dash — direction from keys held
+      let dx=0,dz=0
+      if(keys[cfg.keys.fwd]){dx+=fx;dz+=fz}
+      if(keys[cfg.keys.bwd]){dx-=fx;dz-=fz}
+      if(keys[cfg.keys.lft]){dx+=Math.sin(yaw+Math.PI/2);dz+=Math.cos(yaw+Math.PI/2)}
+      if(keys[cfg.keys.rgt]){dx-=Math.sin(yaw+Math.PI/2);dz-=Math.cos(yaw+Math.PI/2)}
+      if(dx===0&&dz===0){dx=fx;dz=fz}
+      const dl=Math.sqrt(dx*dx+dz*dz)||1
+      const dashDist=7+(pickedUpgrades['Hyper Dash']?.lv||0)*2
+      player.position.x+=(dx/dl)*dashDist
+      player.position.z+=(dz/dl)*dashDist
+      burst(player.position.x,player.position.z,12,0x00ccff,3,22)
+      snd.dash()
+      break
+    }
+    case 'blink':{
+      // Instant teleport — no travel, brief invincibility
+      // Check charges (Lv2+ Blink Step card gives extra charges)
+      const cardLv = pickedUpgrades['Blink Step']?.lv||0
+      blinkMaxCharges = cardLv >= 2 ? 2 : 1
+      if(blinkCharges < blinkMaxCharges) blinkCharges++
+      // Use a charge; if no charges available, use a longer cooldown penalty
+      const blinkRange = 18 + cardLv * 2
+      player.position.x += fx * blinkRange
+      player.position.z += fz * blinkRange
+      burst(player.position.x, player.position.z, 24, 0xaa44ff, 5, 40)
+      invTimer = Math.max(invTimer, 15)
+      snd.dash()
+      tone(880,'sine',.06,.2); tone(1200,'sine',.04,.15)
+      break
+    }
+    case 'phase':{
+      // Phase through reality — full invincibility window
+      const phaseDur=Math.round(50+(pickedUpgrades['Phase Shift']?.lv||0)*25)
+      phaseActive=true; phaseTimer=phaseDur
+      invTimer=Math.max(invTimer,phaseDur)
+      // Shrink player visually during phase
+      player.scale.set(.3,.3,.3)
+      playerBody.material.opacity=.25; playerBody.material.transparent=true
+      burst(player.position.x,player.position.z,18,0x8844ff,3,35)
+      snd.dash(); tone(660,'sine',.15,.25)
+      break
+    }
+    case 'void_step':{
+      // Warp with landing shockwave
+      const warpRange=30+(pickedUpgrades['Void Step']?.lv||0)*5
+      const ox=player.position.x, oz=player.position.z
+      player.position.x+=fx*warpRange
+      player.position.z+=fz*warpRange
+      burst(player.position.x,player.position.z,35,0x5500ff,7,60)
+      burst(ox,oz,20,0x3300aa,4,30)
+      // Shockwave stun nearby enemies at landing
+      const stunRadius=8+(pickedUpgrades['Void Step']?.lv||0)*4
+      enemies.forEach(e=>{
+        const d=e.position.distanceTo(player.position)
+        if(d<stunRadius && e.userData){
+          const origSpd=e.userData.speed
+          e.userData.speed=0
+          e.userData.stunned=true
+          setTimeout(()=>{ if(e.userData){ e.userData.speed=origSpd; e.userData.stunned=false } },1000)
+        }
+      })
+      snd.dash(); tone(220,'sawtooth',.25,.3)
+      break
+    }
+  }
+}
+
+// Tick phase shift (restore player visuals when done)
+function tickPhase(){
+  if(!phaseActive) return
+  phaseTimer--
+  if(phaseTimer<=0){
+    phaseActive=false
+    player.scale.set(1,1,1)
+    playerBody.material.opacity=1
+    burst(player.position.x,player.position.z,20,0x8844ff,4,30)
+  }
+}
+
+// ════════════════════════════════════════════
+// MAIN LOOP
+// ════════════════════════════════════════════
+function loop(){
+  requestAnimationFrame(loop)
+  if(dead)return
+  frameCount++
+
+  playerLight.position.copy(player.position);playerLight.position.y+=3
+  pickupRing.position.x=player.position.x
+  pickupRing.position.z=player.position.z
+  pickupRing.position.y=0.08
+  const hasNearbyXP=drops.some(d=>d.type==='exp'&&player.position.distanceTo(d.mesh.position)<pickupRadius+3)
+  ringMat.opacity=hasNearbyXP?(.3+Math.sin(Date.now()*.006)*.15):.2
+  drawMinimap();updateHUD();updateTime()
+  updateCamera()
+
+  if(paused||inCardScreen||inSkillScreen||inChestScreen){renderer.render(scene,camera);return}
+
+  // Spawn timer (spawnInterval updated by tickWaveSystem once/min)
+  spawnTimer++;if(spawnTimer>=spawnInterval){spawnEnemy();spawnTimer=0}
+
+  // Chest spawn: every ~900 frames (~15s at 60fps)
+  chestSpawnTimer++;if(chestSpawnTimer>=900){spawnChest();chestSpawnTimer=0}
+
+  dashCD=Math.max(0,dashCD-1)
+
+  // Hold-to-shoot: auto-fire every frame as long as LMB held (weapon cooldown handles rate)
+  if(mouseHeld) shoot()
+
+  tickBullets();flushKills();tickEnemies();tickParticles();tickDrops();tickChests();tickWaveSystem();tickPhase();tickEnemyHPBars();tickHitFlashes()
+
+  // Player movement (keyboard + joystick)
+  const fx=Math.sin(yaw),fz=Math.cos(yaw)
+  const rx=Math.sin(yaw+Math.PI/2),rz=Math.cos(yaw+Math.PI/2)
+  let moveX=0,moveZ=0
+  if(keys[cfg.keys.fwd]||keys['ArrowUp'])   {moveX+=fx;moveZ+=fz}
+  if(keys[cfg.keys.bwd]||keys['ArrowDown']) {moveX-=fx;moveZ-=fz}
+  if(keys[cfg.keys.lft]||keys['ArrowLeft']) {moveX+=rx;moveZ+=rz}
+  if(keys[cfg.keys.rgt]||keys['ArrowRight']){moveX-=rx;moveZ-=rz}
+  const mlen=Math.sqrt(moveX*moveX+moveZ*moveZ)||1
+  if(moveX!==0||moveZ!==0){
+    player.position.x+=(moveX/mlen)*playerSpeed
+    player.position.z+=(moveZ/mlen)*playerSpeed
+    if(!shiftLock){
+      const facingY=Math.atan2(moveX/mlen,moveZ/mlen)
+      player.rotation.y=facingY; playerFacingYaw=facingY
+    }
+  }
+  applyJoystick()  // mobile joystick input
+  if(shiftLock){ player.rotation.y=yaw; playerFacingYaw=yaw }
+
+  renderer.render(scene,camera)
+}
+
+// ════════════════════════════════════════════
+// RESPONSIVE + MOBILE CONTROLS
+// ════════════════════════════════════════════
+const isTouchDevice = ()=> ('ontouchstart' in window || navigator.maxTouchPoints>0)
+
+// Resize canvas + minimap on orientation change
+function handleResize(){
+  renderer.setSize(innerWidth,innerHeight)
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix()
+  // Adjust minimap size
+  const mmSize=Math.round(Math.min(innerWidth,innerHeight)*0.18)
+  const mmClamped=Math.max(80,Math.min(mmSize,130))
+  mmCanvas.width=mmClamped; mmCanvas.height=mmClamped
+}
+window.removeEventListener('resize',()=>{})  // remove old listener
+window.addEventListener('resize',handleResize)
+window.addEventListener('orientationchange',()=>setTimeout(handleResize,200))
+handleResize()
+
+// Show mobile controls on touch devices
+if(isTouchDevice()){
+  document.getElementById('joystickZone').style.display='block'
+  document.getElementById('actionBtns').style.display='flex'
+  document.getElementById('mobileTopRow').style.display='block'
+  // On very small screens hide less-important HUD elements
+  if(innerWidth<480){
+    document.getElementById('killFeed').style.display='none'
+  }
+}
+
+// ── Virtual Joystick ──
+const jZone=document.getElementById('joystickZone')
+const jKnob=document.getElementById('joystickKnob')
+let joyActive=false, joyId=-1
+let joyDX=0, joyDZ=0
+
+jZone.addEventListener('touchstart',ev=>{
+  ev.preventDefault()
+  if(joyActive) return
+  const t=ev.changedTouches[0]
+  joyActive=true; joyId=t.identifier
+  updateJoy(t)
+},{passive:false})
+jZone.addEventListener('touchmove',ev=>{
+  ev.preventDefault()
+  for(const t of ev.changedTouches){
+    if(t.identifier===joyId) updateJoy(t)
+  }
+},{passive:false})
+jZone.addEventListener('touchend',ev=>{
+  for(const t of ev.changedTouches){
+    if(t.identifier===joyId){
+      joyActive=false; joyDX=0; joyDZ=0
+      jKnob.style.transform='translate(-50%,-50%)'
+    }
+  }
+})
+
+function updateJoy(touch){
+  const r=jZone.getBoundingClientRect()
+  const cx=r.left+r.width/2, cy=r.top+r.height/2
+  let dx=touch.clientX-cx, dy=touch.clientY-cy
+  const maxR=r.width*.4
+  const mag=Math.sqrt(dx*dx+dy*dy)
+  if(mag>maxR){ dx=dx/mag*maxR; dy=dy/mag*maxR }
+  joyDX=dx/maxR; joyDZ=dy/maxR  // normalized -1..1
+  jKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`
+}
+
+// ── Touch aim (right side of screen, not joystick zone) ──
+let aimTouchId=-1, aimLastX=0, aimLastY=0
+document.addEventListener('touchstart',ev=>{
+  if(dead||inCardScreen||inSkillScreen||inChestScreen||paused) return
+  for(const t of ev.changedTouches){
+    const r=jZone.getBoundingClientRect()
+    const inJoy=(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)
+    if(!inJoy && aimTouchId===-1){
+      aimTouchId=t.identifier; aimLastX=t.clientX; aimLastY=t.clientY
+    }
+  }
+},{passive:true})
+document.addEventListener('touchmove',ev=>{
+  if(dead||inCardScreen||inSkillScreen||inChestScreen||paused) return
+  for(const t of ev.changedTouches){
+    if(t.identifier===aimTouchId){
+      const dx=t.clientX-aimLastX, dy=t.clientY-aimLastY
+      yaw-=dx*cfg.sens*0.5
+      pitch=Math.max(PITCH_MIN,Math.min(PITCH_MAX,pitch+dy*cfg.sens*0.5))
+      aimLastX=t.clientX; aimLastY=t.clientY
+    }
+  }
+},{passive:true})
+document.addEventListener('touchend',ev=>{
+  for(const t of ev.changedTouches){
+    if(t.identifier===aimTouchId) aimTouchId=-1
+  }
+})
+
+// ── Action buttons (shoot / dash / shift lock) ──
+const btnShoot=document.getElementById('btnShoot')
+const btnDash=document.getElementById('btnDash')
+const btnShiftLockEl=document.getElementById('btnShiftLock')
+
+btnShoot.addEventListener('touchstart',ev=>{ ev.preventDefault(); mouseHeld=true; shoot(); btnShoot.classList.add('active') },{passive:false})
+btnShoot.addEventListener('touchend',ev=>{ ev.preventDefault(); mouseHeld=false; btnShoot.classList.remove('active') },{passive:false})
+
+btnDash.addEventListener('touchstart',ev=>{
+  ev.preventDefault()
+  if(dashCD>0) return
+  dashCD=getAbilityCD()
+  triggerMovementAbility()
+},{passive:false})
+
+btnShiftLockEl.addEventListener('touchstart',ev=>{
+  ev.preventDefault()
+  setShiftLock(!shiftLock)
+  btnShiftLockEl.classList.toggle('on', shiftLock)
+},{passive:false})
+
+// Mobile pause button
+document.getElementById('mobilePause').addEventListener('click',()=>{
+  if(!inCardScreen&&!inSkillScreen&&!inChestScreen) setPause(!paused)
+})
+
+// ── Inject joystick input into movement each frame ──
+// Called from main loop — overrides keyboard if joystick active
+function applyJoystick(){
+  if(!joyActive||(joyDX===0&&joyDZ===0)) return
+  const fx=Math.sin(yaw),fz=Math.cos(yaw)
+  const rx=Math.sin(yaw+Math.PI/2),rz=Math.cos(yaw+Math.PI/2)
+  // คำนวณ vector รวม แล้ว normalize เหมือน keyboard (ป้องกันวิ่งแนวทแยงเร็วกว่า)
+  let mx=fx*(-joyDZ)+rx*joyDX, mz=fz*(-joyDZ)+rz*joyDX
+  const mlen=Math.sqrt(mx*mx+mz*mz)||1
+  // ใช้ magnitude ของ joystick เป็น speed multiplier (0..1) และ respect timeSlow
+  const mag=Math.min(1,Math.sqrt(joyDX*joyDX+joyDZ*joyDZ))
+  const spd=playerSpeed*(timeSlowActive?.3:1)*mag
+  player.position.x+=(mx/mlen)*spd
+  player.position.z+=(mz/mlen)*spd
+  // Update facing
+  if(shiftLock){
+    player.rotation.y=yaw; playerFacingYaw=yaw
+  } else {
+    const facingY=Math.atan2(mx/mlen,mz/mlen)
+    if(facingY===facingY){ player.rotation.y=facingY; playerFacingYaw=facingY }
+  }
+}
+
+// ════════════════════════════════════════════
+// DEVELOPER TOOLS SYSTEM
+// ════════════════════════════════════════════
+let devPanelOpen = false
+let devDebugVisible = false
+let powerHudVisible = false
+
+// Populate weapon select dropdown
+function devInitWeaponSelect(){
+  const sel=document.getElementById('devWepSelect')
+  sel.innerHTML=''
+  Object.entries(weaponDefs).forEach(([id,w])=>{
+    const opt=document.createElement('option')
+    opt.value=id; opt.textContent=`${w.name} [${w.rarity}]`
+    sel.appendChild(opt)
+  })
+}
+
+function devLog(msg){
+  const el=document.getElementById('devCheatLog')
+  el.textContent='► '+msg
+  clearTimeout(el._t); el._t=setTimeout(()=>el.textContent='',3000)
+}
+
+function toggleDevPanel(){
+  devPanelOpen=!devPanelOpen
+  document.getElementById('devPanel').classList.toggle('on',devPanelOpen)
+  if(devPanelOpen){ devInitWeaponSelect(); devRefreshDebug() }
+}
+
+function devRefreshDebug(){
+  if(!devDebugVisible) return
+  const pm=getPlayerPowerMult()
+  const bpm=getBulletPowerMult()
+  const box=document.getElementById('devDebugBox')
+  box.innerHTML=`
+    <b>── PLAYER ──</b><br>
+    HP: ${playerHP}/${maxPlayerHP} | Spd: ${playerSpeed.toFixed(3)} | DmgBase×: ${damageMultiplier.toFixed(2)}<br>
+    Level: ${level} | XP: ${exp.toFixed(2)}/${expToLevel.toFixed(2)} | SP: ${skillPoints}<br>
+    PowerScore: ${playerPowerScore} | EnemyMult: ×${pm.toFixed(3)}<br>
+    BulletPower: ×${bpm.toFixed(3)} | FireRate×: ${fireRateMult.toFixed(2)}<br>
+    ShiftLock: ${shiftLock} | GodMode: ${godMode} | Shield: ${shieldActive}<br>
+    <b>── SCENE ──</b><br>
+    Enemies: ${enemies.length} | Bullets: ${bullets.length} | Drops: ${drops.length}<br>
+    Particles: ${particles.length} | Chests: ${chests.length}<br>
+    Boss alive: ${bossAlive} | Wave: ${waveNum} | Frame: ${frameCount}<br>
+    <b>── DEV SCALES ──</b><br>
+    EnemyHP×: ${devEnemyHpScale} | Dmg×: ${devEnemyDmgScale} | Spd×: ${devEnemySpdScale}
+  `.replace(/\n\s+/g,'')
+}
+
+// Hook debug refresh into main loop
+const _origLoop = typeof loop === 'function' ? null : null  // refresh called separately
+
+document.getElementById('devBtn').addEventListener('click', toggleDevPanel)
+
+// F9 shortcut
+document.addEventListener('keydown', ev=>{
+  if(ev.key==='F9'){ ev.preventDefault(); toggleDevPanel() }
+})
+
+// ── Player Stat Controls ──
+document.getElementById('devSetHp').addEventListener('click',()=>{
+  const v=parseInt(document.getElementById('devHpInput').value)||1
+  playerHP=Math.min(v,maxPlayerHP); updateHUD(); devLog(`HP set to ${playerHP}`)
+})
+document.getElementById('devSetMaxHp').addEventListener('click',()=>{
+  const v=parseInt(document.getElementById('devMaxHpInput').value)||1
+  maxPlayerHP=v; playerHP=Math.min(playerHP,maxPlayerHP); updateHUD(); devLog(`Max HP set to ${maxPlayerHP}`)
+})
+document.getElementById('devSetSpd').addEventListener('click',()=>{
+  const v=parseFloat(document.getElementById('devSpdInput').value)||.12
+  playerSpeed=Math.min(v,MAX_PLAYER_SPEED); devLog(`Speed set to ${playerSpeed.toFixed(3)}`)
+})
+document.getElementById('devSetDmg').addEventListener('click',()=>{
+  const v=parseFloat(document.getElementById('devDmgInput').value)||1
+  damageMultiplier=v; devLog(`Damage×${damageMultiplier.toFixed(2)}`)
+})
+document.getElementById('devFullHeal').addEventListener('click',()=>{
+  playerHP=maxPlayerHP; updateHUD(); devLog('Full heal!')
+})
+document.getElementById('devGodMode').addEventListener('click',()=>{
+  godMode=true; godTimer=1800; updateHUD(); devLog('God Mode 30s')
+})
+
+// ── Level / XP ──
+document.getElementById('devLvlUp').addEventListener('click',()=>{
+  gainXP(expToLevel-exp+.01); devLog('Level up!')
+})
+document.getElementById('devLvl5').addEventListener('click',()=>{
+  for(let i=0;i<5;i++) gainXP(expToLevel-exp+.01)
+  devLog('+5 Levels!')
+})
+document.getElementById('devAddSp').addEventListener('click',()=>{
+  const v=parseInt(document.getElementById('devSpInput').value)||5
+  skillPoints+=v; updateHUD(); devLog(`+${v} SP`)
+})
+document.getElementById('devMaxXp').addEventListener('click',()=>{
+  gainXP(expToLevel*0.99); devLog('XP bar filled')
+})
+
+// ── Weapons ──
+document.getElementById('devAllWeapons').addEventListener('click',()=>{
+  Object.keys(weaponDefs).filter(w=>weaponDefs[w].rarity!=='red').forEach(w=>{if(!inventory.includes(w))inventory.push(w)})
+  devLog('All non-ultimate weapons unlocked')
+})
+document.getElementById('devRedWeapons').addEventListener('click',()=>{
+  Object.keys(weaponDefs).forEach(w=>{if(!inventory.includes(w))inventory.push(w)})
+  devLog('All ultimate weapons unlocked')
+})
+document.getElementById('devGiveWep').addEventListener('click',()=>{
+  const wid=document.getElementById('devWepSelect').value
+  if(!inventory.includes(wid)){inventory.push(wid);setWeapon(inventory.length-1)}
+  else setWeapon(inventory.indexOf(wid))
+  devLog(`Weapon: ${weaponDefs[wid].name}`)
+})
+
+// ── Enemy Spawning ──
+document.getElementById('devSpawnEnemy').addEventListener('click',()=>{
+  const type=document.getElementById('devEnemySelect').value
+  const count=Math.min(50,parseInt(document.getElementById('devEnemyCount').value)||1)
+  for(let i=0;i<count;i++) setTimeout(()=>spawnEnemy(type),i*80)
+  devLog(`Spawned ${count}x ${type}`)
+})
+document.getElementById('devSpawnBoss').addEventListener('click',()=>{ spawnBoss(); devLog('Boss spawned!') })
+document.getElementById('devSpawnMiniBoss').addEventListener('click',()=>{ spawnMiniBoss(); devLog('Mini boss spawned!') })
+document.getElementById('devKillAll').addEventListener('click',()=>{
+  const n=enemies.length
+  for(let i=enemies.length-1;i>=0;i--) killEnemy(i)
+  devLog(`Killed ${n} enemies`)
+})
+
+// ── Cards ──
+document.getElementById('devShowCards').addEventListener('click',()=>{ showCardScreen(); devLog('Card screen opened') })
+document.getElementById('devAllCards').addEventListener('click',()=>{
+  getCardPool().forEach(c=>{ c.apply(); recordUpgrade(c.name,c.effects?c.effects[0]:c.name) })
+  updateHUD(); updateInfoPanel()
+  devLog('All cards applied!')
+})
+document.getElementById('devShowFilteredCards').addEventListener('click',()=>{
+  const cat=document.getElementById('devCardCat').value
+  // Override pool temporarily to show only category
+  const pool=getCardPool().filter(c=>!cat||c.category===cat)
+  if(!pool.length){ devLog('No cards in that category'); return }
+  // Show card screen with filtered pool — monkey-patch temporarily
+  const _orig=window._devCardOverride=pool
+  inCardScreen=true
+  if(document.pointerLockElement===document.body) document.exitPointerLock()
+  const chosen=[], used=new Set()
+  let attempts=0
+  while(chosen.length<Math.min(3,pool.length) && attempts<200){
+    attempts++
+    const idx=Math.floor(Math.random()*pool.length)
+    if(!used.has(idx)){ used.add(idx); chosen.push(pool[idx]) }
+  }
+  document.getElementById('cardSubtitle').textContent=`[DEV] Category: ${cat||'All'}`
+  const row=document.getElementById('cardRow'); row.innerHTML=''
+  chosen.forEach(card=>row.appendChild(buildCardEl(card)))
+  document.getElementById('cardScreen').classList.add('on')
+  devLog(`Showing ${cat||'all'} cards`)
+})
+
+// ── Difficulty Scaling ──
+document.getElementById('devApplyScale').addEventListener('click',()=>{
+  devEnemyHpScale =Math.max(.1,parseFloat(document.getElementById('devScaleHp').value)||1)
+  devEnemyDmgScale=Math.max(.1,parseFloat(document.getElementById('devScaleDmg').value)||1)
+  devEnemySpdScale=Math.max(.1,parseFloat(document.getElementById('devScaleSpd').value)||1)
+  // Apply dmg scale to existing enemies
+  enemies.forEach(e=>{ if(e.userData) e.userData.dmgMult=devEnemyDmgScale })
+  devLog(`Scales: HP×${devEnemyHpScale} Dmg×${devEnemyDmgScale} Spd×${devEnemySpdScale}`)
+})
+
+// ── Debug Display ──
+document.getElementById('devToggleDebug').addEventListener('click',()=>{
+  devDebugVisible=!devDebugVisible
+  const box=document.getElementById('devDebugBox')
+  box.style.display=devDebugVisible?'block':'none'
+  if(devDebugVisible) devRefreshDebug()
+})
+document.getElementById('devTogglePowerHud').addEventListener('click',()=>{
+  powerHudVisible=!powerHudVisible
+  const el=document.getElementById('powerScaleHud')
+  el.style.display=powerHudVisible?'block':'none'
+  if(powerHudVisible) updatePowerHud()
+  devLog('Power HUD '+(powerHudVisible?'ON':'OFF'))
+})
+
+// Refresh debug info every second when visible
+setInterval(()=>{ if(devDebugVisible&&devPanelOpen) devRefreshDebug() }, 1000)
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+// Auto-pause when tab loses focus
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden && !dead && !inCardScreen && !inSkillScreen && !inChestScreen){
+    setPause(true)
+  }
+})
+
+setWeapon(0);updateHUD();updateInfoPanel()
+
+// Set initial camera so the scene is visible from frame 1
+updateCamera()
+
+// Spawn first chest after 5s
+setTimeout(spawnChest, 5000)
+
+// ── Early game: burst of weak runners immediately ──
+for(let i=0;i<6;i++) setTimeout(()=>spawnEnemy('runner'),i*400+500)
+// Wave 0 announcement
+setTimeout(()=>announce('⚔ Fight! Survive the waves!','#0ff'),800)
+
+loop()
+</script>
+</body>
+</html>
